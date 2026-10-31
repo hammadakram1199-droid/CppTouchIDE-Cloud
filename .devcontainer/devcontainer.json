@@ -1,0 +1,22 @@
+{
+  "name": "Android CppTouchIDE",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "jdk": "temurin"
+    },
+    "ghcr.io/devcontainers/features/android-sdk:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "fwcd.kotlin",
+        "mathiasfrohlich.kotlin",
+        "vscjava.vscode-gradle"
+      ]
+    }
+  },
+  "postCreateCommand": "yes | sdkmanager --licenses > /dev/null 2>&1"
+}
