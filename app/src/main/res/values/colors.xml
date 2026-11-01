@@ -10,4 +10,10 @@
     <color name="console_green">#00FF00</color>
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
+    
+    <!-- Old colors added back just in case any other old file is hiding -->
+    <color name="bg_dark">#1E1E1E</color>
+    <color name="bg_surface">#252526</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_accent">#00FF88</color>
 </resources>
