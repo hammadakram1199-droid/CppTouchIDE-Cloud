@@ -36,9 +36,8 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
-    // Sora Code Editor
+    // Sora Code Editor (removed the non-existent language-cpp module)
     implementation("io.github.Rosemoe.sora-editor:editor:0.23.4")
-    implementation("io.github.Rosemoe.sora-editor:language-cpp:0.23.4")
     
     // ML Kit
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
