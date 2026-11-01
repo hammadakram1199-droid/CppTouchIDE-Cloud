@@ -8,9 +8,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
-import io.github.rosemoe.sora.langs.cpp.CppLanguage
 import io.github.rosemoe.sora.widget.CodeEditor
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -51,13 +49,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Setup Sora Code Editor
-        editor.setEditorLanguage(CppLanguage())
-        val scheme = EditorColorScheme()
-        scheme.setColor(EditorColorScheme.BACKGROUND, 0xFF1E1E1E.toInt())
-        scheme.setColor(EditorColorScheme.TEXT_NORMAL, 0xFFD4D4D4.toInt())
-        scheme.setColor(EditorColorScheme.LINE_NUMBER, 0xFF858585.toInt())
-        editor.setColorScheme(scheme)
+        // Setup Sora Code Editor (Default configuration)
         editor.setText("#include <iostream>\n\nint main() {\n    std::cout << \"Hello World!\" << std::endl;\n    return 0;\n}")
 
         // Setup Navigation Drawer
@@ -69,7 +61,6 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_save -> {
-                    // We will implement real file saving later
                     Toast.makeText(this, "Project Saved!", Toast.LENGTH_SHORT).show()
                     drawerLayout.closeDrawers()
                     true
