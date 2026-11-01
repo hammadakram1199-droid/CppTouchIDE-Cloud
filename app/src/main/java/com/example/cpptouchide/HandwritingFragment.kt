@@ -18,7 +18,7 @@ import com.google.mlkit.vision.digitalink.DigitalInkRecognizer
 class HandwritingFragment : Fragment() {
     private lateinit var viewModel: MainViewModel
     private lateinit var handwritingView: HandwritingView
-    private lateinit var recognizer: DigitalInkRecognizer
+    private var recognizer: DigitalInkRecognizer? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_handwriting, container, false)
@@ -39,7 +39,14 @@ class HandwritingFragment : Fragment() {
                 Toast.makeText(context, "Draw something first!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            recognizer.recognize(ink).addOnSuccessListener { result ->
+            
+            val rec = recognizer
+            if (rec == null) {
+                Toast.makeText(context, "Handwriting model not ready yet. Check internet.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            rec.recognize(ink).addOnSuccessListener { result ->
                 if (result.candidates.isNotEmpty()) {
                     viewModel.appendCode(result.candidates[0].text)
                     Toast.makeText(context, "Added to Code tab!", Toast.LENGTH_SHORT).show()
@@ -52,11 +59,15 @@ class HandwritingFragment : Fragment() {
     }
 
     private fun initModel() {
-        val modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
-        val model = DigitalInkRecognitionModel.builder(modelIdentifier).build()
-        recognizer = DigitalInkRecognition.getClient(
-            com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions.builder(model).build()
-        )
-        RemoteModelManager.getInstance().download(model, DownloadConditions.Builder().build())
+        try {
+            val modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
+            val model = DigitalInkRecognitionModel.builder(modelIdentifier).build()
+            recognizer = DigitalInkRecognition.getClient(
+                com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions.builder(model).build()
+            )
+            RemoteModelManager.getInstance().download(model, DownloadConditions.Builder().build())
+        } catch (e: Exception) {
+            // Prevent crash if Google Play Services is missing or fails
+        }
     }
 }

@@ -3,9 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="true"
-        android:label="CppTouchIDE"
+        android:label="C++ IDE Pro"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        android:theme="@style/Theme.CppTouchIDE">
         <activity
             android:name=".MainActivity"
             android:exported="true">
