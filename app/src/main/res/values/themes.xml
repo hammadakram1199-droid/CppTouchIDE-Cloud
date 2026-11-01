@@ -7,14 +7,3 @@
         <item name="android:statusBarColor">#1E1E1E</item>
     </style>
 </resources>
-EOFmkdir -p app/src/main/res/values
-cat << 'EOF' > app/src/main/res/values/themes.xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.CppTouchIDE" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#252526</item>
-        <item name="colorPrimaryVariant">#1E1E1E</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="android:statusBarColor">#1E1E1E</item>
-    </style>
-</resources>
