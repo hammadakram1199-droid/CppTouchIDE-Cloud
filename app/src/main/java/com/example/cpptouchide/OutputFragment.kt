@@ -40,11 +40,11 @@ class OutputFragment : Fragment() {
     }
 
     private fun runCode(code: String) {
-        tvOutput.text = "> Sending to compiler...\n"
+        tvOutput.text = "> Connecting to compiler...\n"
         
         val json = JSONObject().apply {
             put("language", "c++")
-            put("version", "10.2.0")
+            put("version", "*")
             put("files", JSONArray().put(JSONObject().put("content", code)))
         }
 
@@ -52,14 +52,14 @@ class OutputFragment : Fragment() {
         val request = Request.Builder()
             .url("https://emkc.org/api/v2/piston/execute")
             .post(requestBody)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .header("User-Agent", "Mozilla/5.0")
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (isAdded) {
                     requireActivity().runOnUiThread { 
-                        tvOutput.text = "> NETWORK ERROR:\n${e.message}\n\nCheck your internet connection." 
+                        tvOutput.text = "> NETWORK ERROR:\n${e.message}\n\nMake sure you are connected to the internet." 
                     }
                 }
             }
@@ -71,38 +71,31 @@ class OutputFragment : Fragment() {
                         if (responseData != null) {
                             try {
                                 val jsonRes = JSONObject(responseData)
-                                val sb = StringBuilder("> COMPILE SUCCESS\n\n")
-                                var hasOutput = false
+                                val sb = StringBuilder()
                                 
+                                // Parse Compile Errors
                                 jsonRes.optJSONObject("compile")?.let {
                                     val stderr = it.optString("stderr")
-                                    if (stderr.isNotBlank()) {
-                                        sb.append("COMPILE ERROR:\n$stderr\n")
-                                        hasOutput = true
-                                    }
+                                    if (stderr.isNotBlank()) sb.append("COMPILE ERROR:\n$stderr\n\n")
                                 }
+                                
+                                // Parse Run Output
                                 jsonRes.optJSONObject("run")?.let {
                                     val stdout = it.optString("stdout")
                                     val stderr = it.optString("stderr")
-                                    if (stdout.isNotBlank()) {
-                                        sb.append("OUTPUT:\n$stdout\n")
-                                        hasOutput = true
-                                    }
-                                    if (stderr.isNotBlank()) {
-                                        sb.append("RUNTIME ERROR:\n$stderr\n")
-                                        hasOutput = true
-                                    }
+                                    if (stdout.isNotBlank()) sb.append("OUTPUT:\n$stdout\n")
+                                    if (stderr.isNotBlank()) sb.append("RUNTIME ERROR:\n$stderr\n")
                                 }
                                 
-                                if (!hasOutput) {
-                                    sb.append("> Program executed, but printed nothing.\n")
+                                if (sb.isBlank()) {
+                                    sb.append("> Code executed successfully, but no output was generated.\n> Did you forget to use 'cout <<'?")
                                 }
                                 tvOutput.text = sb.toString()
                             } catch (e: Exception) {
-                                tvOutput.text = "> SERVER ERROR:\n$responseData"
+                                tvOutput.text = "> PARSE ERROR:\n$responseData"
                             }
                         } else {
-                            tvOutput.text = "> Error: Server returned empty response."
+                            tvOutput.text = "> Error: Empty response."
                         }
                     }
                 }

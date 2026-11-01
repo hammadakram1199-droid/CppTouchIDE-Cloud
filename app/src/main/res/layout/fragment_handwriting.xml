@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Recognize Code"
-            app:cornerRadius="12dp" />
+            app:cornerRadius="8dp" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -26,15 +26,14 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Clear"
-            app:cornerRadius="12dp" />
+            app:cornerRadius="8dp" />
     </LinearLayout>
 
-    <ScrollView
+    <!-- Directly on the screen, no ScrollView to steal touches -->
+    <com.example.cpptouchide.HandwritingView
+        android:id="@+id/handwritingView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <com.example.cpptouchide.HandwritingView
-            android:id="@+id/handwritingView"
-            android:layout_width="match_parent"
-            android:layout_height="4800dp" />
-    </ScrollView>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#111111" />
 </LinearLayout>
