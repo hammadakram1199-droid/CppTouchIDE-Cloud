@@ -103,7 +103,10 @@ class OutputFragment : Fragment() {
                 if (stderr.isNotBlank()) sb.append("RUNTIME ERROR:\n$stderr\n")
             }
             
-            if (sb.length < 5) sb.append("> Process finished with no output.") else sb.toString()
+            if (sb.length < 5) {
+                sb.append("> Process finished with no output.")
+            }
+            sb.toString()
         } catch (e: Exception) {
             "Error parsing response."
         }
