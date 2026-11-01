@@ -3,109 +3,133 @@ package com.example.cpptouchide
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class ProjectsFragment : Fragment() {
     private lateinit var viewModel: MainViewModel
-    private lateinit var container: LinearLayout
+    private lateinit var adapter: ProjectsAdapter
+
+    private val createFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/x-c++src")) { uri: Uri? ->
+        uri?.let {
+            val code = viewModel.currentCode.value ?: ""
+            requireContext().contentResolver.openOutputStream(it)?.use { stream ->
+                stream.write(code.toByteArray())
+                Toast.makeText(context, "File saved successfully!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(android.R.layout.list_content, container, false)
+        return inflater.inflate(R.layout.fragment_projects, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
-        
-        val scrollView = android.widget.ScrollView(requireContext())
-        container = LinearLayout(requireContext())
-        container.orientation = LinearLayout.VERTICAL
-        
-        val btnNew = Button(requireContext()).apply { text = "Save Current Code as New Project" }
-        container.addView(btnNew)
 
-        btnNew.setOnClickListener {
-            val input = EditText(requireContext())
-            input.hint = "Project Name"
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Save Project")
-                .setView(input)
-                .setPositiveButton("Save") { _, _ ->
-                    val name = input.text.toString()
-                    if (name.isNotBlank()) {
-                        saveProject(name, viewModel.currentCode.value ?: "")
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
+        val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
+        val fab = view.findViewById<FloatingActionButton>(R.id.fabAdd)
 
-        scrollView.addView(container)
+        adapter = ProjectsAdapter(
+            onLoad = { project -> viewModel.updateCode(project.code) },
+            onLongClick = { project -> showOptions(project) }
+        )
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        recyclerView.adapter = adapter
+
         loadProjects()
-        (view as android.widget.FrameLayout).addView(scrollView) // Hack for simple inflate
+
+        fab.setOnClickListener { showSaveDialog() }
     }
 
-    private fun saveProject(name: String, code: String) {
-        val prefs = requireContext().getSharedPreferences("projects", Context.MODE_PRIVATE)
-        prefs.edit().putString(name, code).apply()
-        Toast.makeText(requireContext(), "Saved!", Toast.LENGTH_SHORT).show()
-        loadProjects()
+    private fun showSaveDialog() {
+        val input = EditText(requireContext()).apply { hint = "Project Name" }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Save Project")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val name = input.text.toString()
+                if (name.isNotBlank()) {
+                    val prefs = requireContext().getSharedPreferences("projects", Context.MODE_PRIVATE)
+                    prefs.edit().putString(name, viewModel.currentCode.value).apply()
+                    loadProjects()
+                }
+            }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun showOptions(project: Project) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(project.name)
+            .setItems(arrayOf("Copy Code", "Download as .cpp", "Delete")) { _, which ->
+                when (which) {
+                    0 -> {
+                        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("code", project.code))
+                        Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
+                    }
+                    1 -> {
+                        viewModel.updateCode(project.code)
+                        createFileLauncher.launch("${project.name}.cpp")
+                    }
+                    2 -> {
+                        val prefs = requireContext().getSharedPreferences("projects", Context.MODE_PRIVATE)
+                        prefs.edit().remove(project.name).apply()
+                        loadProjects()
+                    }
+                }
+            }.show()
     }
 
     private fun loadProjects() {
-        container.removeAllViews()
         val prefs = requireContext().getSharedPreferences("projects", Context.MODE_PRIVATE)
-        for ((name, code) in prefs.all) {
-            val btn = Button(requireContext()).apply {
-                text = name
-                setOnClickListener {
-                    viewModel.updateCode(code as String)
-                    Toast.makeText(requireContext(), "Loaded $name", Toast.LENGTH_SHORT).show()
-                }
-                setOnLongClickListener {
-                    MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(name)
-                        .setItems(arrayOf("Copy Code", "Download/Export", "Delete Project")) { _, which ->
-                            when(which) {
-                                0 -> copyToClipboard(code as String)
-                                1 -> downloadFile(name, code as String)
-                                2 -> {
-                                    prefs.edit().remove(name).apply()
-                                    loadProjects()
-                                }
-                            }
-                        }.show()
-                    true
-                }
-            }
-            container.addView(btn)
-        }
+        val projects = prefs.all.map { Project(it.key, it.value as String) }.sortedBy { it.name }
+        adapter.submitList(projects)
+    }
+}
+
+data class Project(val name: String, val code: String)
+
+class ProjectsAdapter(
+    private val onLoad: (Project) -> Unit,
+    private val onLongClick: (Project) -> Unit
+) : RecyclerView.Adapter<ProjectsAdapter.ViewHolder>() {
+    private var projects = listOf<Project>()
+
+    fun submitList(newProjects: List<Project>) {
+        projects = newProjects
+        notifyDataSetChanged()
     }
 
-    private fun copyToClipboard(code: String) {
-        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("code", code))
-        Toast.makeText(requireContext(), "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_project, parent, false)
+        return ViewHolder(view)
     }
 
-    private fun downloadFile(name: String, code: String) {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TITLE, "$name.cpp")
-        }
-        startActivity(intent)
-        Toast.makeText(requireContext(), "Select folder to save $name.cpp", Toast.LENGTH_LONG).show()
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val project = projects[position]
+        holder.name.text = project.name
+        holder.snippet.text = project.code.take(100).replace("\n", " ")
+        holder.itemView.setOnClickListener { onLoad(project) }
+        holder.itemView.setOnLongClickListener { onLongClick(project); true }
+    }
+
+    override fun getItemCount() = projects.size
+
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val name: android.widget.TextView = view.findViewById(R.id.tvProjectName)
+        val snippet: android.widget.TextView = view.findViewById(R.id.tvSnippet)
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_dark">#1E1E1E</color>
+    <color name="bg_surface">#252526</color>
+    <color name="text_primary">#D4D4D4</color>
+    <color name="text_accent">#4EC9B0</color>
+    <color name="editor_bg">#1E1E1E</color>
+    <color name="editor_text">#D4D4D4</color>
+    <color name="editor_line_numbers">#858585</color>
+    <color name="output_bg">#000000</color>
+    <color name="output_text">#00FF00</color>
+</resources>

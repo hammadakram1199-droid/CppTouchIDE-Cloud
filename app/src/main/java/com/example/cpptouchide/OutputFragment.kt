@@ -4,91 +4,108 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.button.MaterialButton
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.net.HttpURLConnection
-import java.net.URL
+import java.io.IOException
 
 class OutputFragment : Fragment() {
     private lateinit var viewModel: MainViewModel
-    private lateinit var outputText: TextView
+    private lateinit var tvOutput: TextView
+    private lateinit var btnRun: MaterialButton
+    private val client = OkHttpClient()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val layout = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL }
-        
-        val btnRun = Button(requireContext()).apply { text = "Run Code Online" }
-        outputText = TextView(requireContext()).apply { 
-            setTextColor(0xFFEEEEEE.toInt())
-            setBackgroundColor(0xFF050505.toInt())
-            text = "Output will appear here..."
-            setPadding(20, 20, 20, 20)
-        }
-
-        layout.addView(btnRun)
-        layout.addView(outputText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        return layout
+        return inflater.inflate(R.layout.fragment_output, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
         
-        val btnRun = (view as LinearLayout).getChildAt(0) as Button
+        tvOutput = view.findViewById(R.id.tvOutput)
+        btnRun = view.findViewById(R.id.btnRun)
+
+        viewModel.output.observe(viewLifecycleOwner) {
+            tvOutput.text = it
+        }
+
         btnRun.setOnClickListener {
-            val code = viewModel.currentCode.value ?: ""
+            val code = viewModel.currentCode.value ?: return@setOnClickListener
             if (code.isBlank()) {
-                outputText.text = "No code to run!"
+                Toast.makeText(context, "Code is empty!", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            outputText.text = "Compiling and running..."
-            Thread {
-                val result = runCppOnline(code)
-                requireActivity().runOnUiThread { outputText.text = result }
-            }.start()
+            runCode(code)
         }
     }
 
-    private fun runCppOnline(code: String): String {
-        val endpoint = URL("https://emkc.org/api/v2/piston/execute")
-        var conn: HttpURLConnection? = null
+    private fun runCode(code: String) {
+        btnRun.isEnabled = false
+        viewModel.updateOutput("\n> Compiling and running...\n")
+
+        val json = JSONObject().apply {
+            put("language", "c++")
+            put("version", "10.2.0")
+            put("files", JSONArray().put(JSONObject().put("content", code)))
+        }
+
+        val requestBody = json.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("https://emkc.org/api/v2/piston/execute")
+            .post(requestBody)
+            .header("User-Agent", "CppTouchIDE/2.0") // Fixes the "Not Whitelisted" error
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                requireActivity().runOnUiThread {
+                    viewModel.updateOutput("Network Error: ${e.message}")
+                    btnRun.isEnabled = true
+                }
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseData = response.body?.string()
+                requireActivity().runOnUiThread {
+                    btnRun.isEnabled = true
+                    if (responseData != null) {
+                        viewModel.updateOutput(parseResponse(responseData))
+                    } else {
+                        viewModel.updateOutput("Error: Empty response from server.")
+                    }
+                }
+            }
+        })
+    }
+
+    private fun parseResponse(jsonString: String): String {
         return try {
-            val files = JSONArray().put(JSONObject().put("content", code))
-            val body = JSONObject().put("language", "c++").put("version", "10.2.0").put("files", files).toString()
-
-            conn = endpoint.openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/json")
-            // THIS HEADER FIXES THE "NOT WHITELISTED" ERROR
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)") 
-            conn.doOutput = true
-
-            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-
-            val response = if (conn.responseCode in 200..299) {
-                conn.inputStream.bufferedReader().use(BufferedReader::readText)
-            } else {
-                return "Server Error: ${conn.responseCode}"
-            }
-
-            val json = JSONObject(response)
-            val sb = StringBuilder()
-
+            val json = JSONObject(jsonString)
+            val sb = StringBuilder("\n")
+            
             json.optJSONObject("compile")?.let { compile ->
-                if (compile.optString("stderr").isNotBlank()) sb.append("COMPILE ERROR:\n${compile.optString("stderr")}\n\n")
+                val stderr = compile.optString("stderr")
+                if (stderr.isNotBlank()) sb.append("COMPILE ERROR:\n$stderr\n\n")
             }
+            
             json.optJSONObject("run")?.let { run ->
-                if (run.optString("stdout").isNotBlank()) sb.append(run.optString("stdout"))
-                if (run.optString("stderr").isNotBlank()) sb.append("RUNTIME ERROR:\n${run.optString("stderr")}")
+                val stdout = run.optString("stdout")
+                val stderr = run.optString("stderr")
+                if (stdout.isNotBlank()) sb.append("OUTPUT:\n$stdout\n")
+                if (stderr.isNotBlank()) sb.append("RUNTIME ERROR:\n$stderr\n")
             }
-            if (sb.isBlank()) "Process finished with no output." else sb.toString()
+            
+            if (sb.length < 5) sb.append("> Process finished with no output.") else sb.toString()
         } catch (e: Exception) {
-            "Network Error: ${e.message}"
-        } finally { conn?.disconnect() }
+            "Error parsing response."
+        }
     }
 }

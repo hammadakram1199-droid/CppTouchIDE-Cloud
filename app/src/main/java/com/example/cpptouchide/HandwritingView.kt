@@ -24,8 +24,9 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private val linePaint = Paint().apply {
-        color = 0xFF444444.toInt() // Dark grey lines
+        color = 0xFF333333.toInt()
         strokeWidth = 2f
+        style = Paint.Style.STROKE
     }
 
     private val path = Path()
@@ -38,12 +39,14 @@ class HandwritingView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // Draw 300 horizontal lines
+        
+        // Draw notebook lines
         var y = lineHeight
         while (y < height) {
             canvas.drawLine(0f, y, width.toFloat(), y, linePaint)
             y += lineHeight
         }
+        
         canvas.drawPath(path, paint)
     }
 
