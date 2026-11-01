@@ -4,23 +4,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_dark">
+    android:background="#1E1E1E">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/bg_surface"
+        android:background="#252526"
         app:title="C++ IDE Pro"
-        app:titleTextColor="@color/text_primary" />
+        app:titleTextColor="#FFFFFF" />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/bg_surface"
-        app:tabIndicatorColor="@color/text_accent"
-        app:tabSelectedTextColor="@color/text_accent"
+        android:background="#252526"
+        app:tabIndicatorColor="#00FF88"
+        app:tabSelectedTextColor="#00FF88"
         app:tabTextColor="#AAAAAA" />
 
     <androidx.viewpager2.widget.ViewPager2

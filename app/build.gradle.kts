@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.cpptouchide"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "4.0"
+        versionCode = 5
+        versionName = "5.0"
     }
 
     buildTypes {
@@ -36,10 +36,5 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    
-    // Sora Code Editor
-    implementation("io.github.Rosemoe.sora-editor:editor:0.23.4")
-    
-    // ML Kit Handwriting
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
 }

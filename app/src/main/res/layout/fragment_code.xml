@@ -2,11 +2,56 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/editor_bg"
-    android:padding="8dp">
+    android:orientation="vertical"
+    android:background="#1E1E1E">
 
-    <io.github.rosemoe.sora.widget.CodeEditor
-        android:id="@+id/editor"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- Line Numbers -->
+        <TextView
+            android:id="@+id/lineNumbers"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:background="#1A1A1A"
+            android:gravity="top|end"
+            android:paddingTop="12dp"
+            android:paddingEnd="8dp"
+            android:fontFamily="monospace"
+            android:textColor="#858585"
+            android:textSize="15sp"
+            android:text="1\n2\n3\n4\n5" />
+
+        <!-- Main Editor -->
+        <EditText
+            android:id="@+id/codeEditor"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:gravity="top|start"
+            android:padding="12dp"
+            android:fontFamily="monospace"
+            android:textColor="#D4D4D4"
+            android:textSize="15sp"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:scrollbars="vertical"
+            android:text="#include <iostream>\n\nint main() {\n    std::cout << &quot;Hello World!&quot;;\n    return 0;\n}" />
+    </LinearLayout>
+
+    <!-- Bottom Symbol Bar -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#252526">
+        <LinearLayout
+            android:id="@+id/symbolBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="4dp" />
+    </HorizontalScrollView>
 </LinearLayout>

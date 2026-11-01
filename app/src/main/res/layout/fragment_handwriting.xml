@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_dark"
+    android:background="#1E1E1E"
     android:padding="8dp">
 
     <LinearLayout
@@ -16,7 +16,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recognize &amp; Add to Code" />
+            android:text="Recognize &amp; Send to Code" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -26,10 +26,10 @@
             android:text="Clear" />
     </LinearLayout>
 
-    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
-        <com.example.cpptouchide.HandwritingView
-            android:id="@+id/handwritingView"
-            android:layout_width="match_parent"
-            android:layout_height="18000dp" />
-    </ScrollView>
+    <com.example.cpptouchide.HandwritingView
+        android:id="@+id/handwritingView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#111111" />
 </LinearLayout>
