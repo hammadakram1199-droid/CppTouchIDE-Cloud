@@ -16,7 +16,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recognize & Add to Code" />
+            android:text="Recognize &amp; Add to Code" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -30,6 +30,6 @@
         <com.example.cpptouchide.HandwritingView
             android:id="@+id/handwritingView"
             android:layout_width="match_parent"
-            android:layout_height="18000dp" /> <!-- 300 lines -->
+            android:layout_height="18000dp" />
     </ScrollView>
 </LinearLayout>
