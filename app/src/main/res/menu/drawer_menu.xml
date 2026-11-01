@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_new"
+            android:icon="@android:drawable/ic_menu_add"
+            android:title="New Project" />
+        <item
+            android:id="@+id/nav_save"
+            android:icon="@android:drawable/ic_menu_save"
+            android:title="Save Project" />
+        <item
+            android:id="@+id/nav_handwriting"
+            android:icon="@android:drawable/ic_menu_edit"
+            android:title="Handwriting Input" />
+    </group>
+</menu>
