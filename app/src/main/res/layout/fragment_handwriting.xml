@@ -29,13 +29,11 @@
             app:cornerRadius="8dp" />
     </LinearLayout>
 
-    <ScrollView
+    <!-- This fills the rest of the screen perfectly -->
+    <com.example.cpptouchide.HandwritingView
+        android:id="@+id/handwritingView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
-        <com.example.cpptouchide.HandwritingView
-            android:id="@+id/handwritingView"
-            android:layout_width="match_parent"
-            android:layout_height="4000dp" />
-    </ScrollView>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#111111" />
 </LinearLayout>

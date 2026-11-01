@@ -62,7 +62,6 @@ class HandwritingView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                parent?.requestDisallowInterceptTouchEvent(true) 
                 path.moveTo(x, y); lastX = x; lastY = y
                 strokeBuilder = Ink.Stroke.builder()
                 strokeBuilder?.addPoint(Ink.Point.create(x, y, t))

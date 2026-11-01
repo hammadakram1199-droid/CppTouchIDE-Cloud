@@ -44,7 +44,7 @@ class OutputFragment : Fragment() {
         
         val json = JSONObject().apply {
             put("language", "c++")
-            put("version", "*")
+            put("version", "10.2.0") // Using exact version for stability
             put("files", JSONArray().put(JSONObject().put("content", code)))
         }
 
@@ -52,7 +52,7 @@ class OutputFragment : Fragment() {
         val request = Request.Builder()
             .url("https://emkc.org/api/v2/piston/execute")
             .post(requestBody)
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .header("User-Agent", "Mozilla/5.0 (Android)")
             .build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -86,14 +86,14 @@ class OutputFragment : Fragment() {
                                 }
                                 
                                 if (sb.isBlank()) {
-                                    sb.append("> Code executed successfully, but no output was generated.\n> Did you forget to use 'cout <<'?")
+                                    sb.append("> Code executed successfully, but no output was generated.")
                                 }
                                 tvOutput.text = sb.toString()
                             } catch (e: Exception) {
-                                tvOutput.text = "> PARSE ERROR:\n$responseData"
+                                tvOutput.text = "> Error parsing server response:\n$responseData"
                             }
                         } else {
-                            tvOutput.text = "> Error: Empty response."
+                            tvOutput.text = "> Error: Empty response from server."
                         }
                     }
                 }
