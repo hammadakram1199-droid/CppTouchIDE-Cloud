@@ -1,6 +1,7 @@
 package com.example.cpptouchide
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.Toast
@@ -10,12 +11,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 
 class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: MainViewModel
+    private lateinit var viewPager: ViewPager2
+    private lateinit var btnHandwriting: MaterialButton
+    private lateinit var btnCode: MaterialButton
+    private lateinit var btnOutput: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,22 +27,20 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
-        val viewPager = findViewById<ViewPager2>(R.id.viewPager)
+        viewPager = findViewById(R.id.viewPager)
+        btnHandwriting = findViewById(R.id.btnTabHandwriting)
+        btnCode = findViewById(R.id.btnTabCode)
+        btnOutput = findViewById(R.id.btnTabOutput)
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         
-        toolbar.inflateMenu(R.menu.main_menu)
+        // DISABLE SWIPING
+        viewPager.isUserInputEnabled = false 
 
+        toolbar.inflateMenu(R.menu.main_menu)
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_save -> {
-                    showSaveDialog()
-                    true
-                }
-                R.id.action_load -> {
-                    showLoadDialog()
-                    true
-                }
+                R.id.action_save -> { showSaveDialog(); true }
+                R.id.action_load -> { showLoadDialog(); true }
                 else -> false
             }
         }
@@ -55,10 +57,30 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val tabTitles = arrayOf("Handwriting", "Code", "Output")
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = tabTitles[position]
-        }.attach()
+        btnHandwriting.setOnClickListener { selectTab(0) }
+        btnCode.setOnClickListener { selectTab(1) }
+        btnOutput.setOnClickListener { selectTab(2) }
+
+        selectTab(0) // Default tab
+    }
+
+    private fun selectTab(index: Int) {
+        viewPager.setCurrentItem(index, false)
+        
+        // Reset all buttons to grey
+        btnHandwriting.setBackgroundColor(Color.parseColor("#333333"))
+        btnHandwriting.setTextColor(Color.WHITE)
+        btnCode.setBackgroundColor(Color.parseColor("#333333"))
+        btnCode.setTextColor(Color.WHITE)
+        btnOutput.setBackgroundColor(Color.parseColor("#333333"))
+        btnOutput.setTextColor(Color.WHITE)
+
+        // Highlight selected button
+        when (index) {
+            0 -> { btnHandwriting.setBackgroundColor(Color.parseColor("#00FF88")); btnHandwriting.setTextColor(Color.BLACK) }
+            1 -> { btnCode.setBackgroundColor(Color.parseColor("#00FF88")); btnCode.setTextColor(Color.BLACK) }
+            2 -> { btnOutput.setBackgroundColor(Color.parseColor("#00FF88")); btnOutput.setTextColor(Color.BLACK) }
+        }
     }
 
     private fun showSaveDialog() {
@@ -79,12 +101,10 @@ class MainActivity : AppCompatActivity() {
     private fun showLoadDialog() {
         val prefs = getSharedPreferences("projects", Context.MODE_PRIVATE)
         val projects = prefs.all.keys.toTypedArray()
-        
         if (projects.isEmpty()) {
-            Toast.makeText(this, "No saved projects found.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No saved projects.", Toast.LENGTH_SHORT).show()
             return
         }
-
         MaterialAlertDialogBuilder(this)
             .setTitle("Load Project")
             .setItems(projects) { _, which ->

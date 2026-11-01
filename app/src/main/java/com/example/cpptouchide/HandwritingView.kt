@@ -28,12 +28,17 @@ class HandwritingView @JvmOverloads constructor(
         strokeWidth = 2f
     }
 
+    private val numberPaint = Paint().apply {
+        color = 0xFF888888.toInt()
+        textSize = 30f
+        isAntiAlias = true
+    }
+
     private val path = Path()
     private var lastX = 0f
     private var lastY = 0f
     
-    // DOUBLED the line height from 60f to 120f
-    private val lineHeight = 120f 
+    private val lineHeight = 60f
 
     private var inkBuilder = Ink.builder()
     private var strokeBuilder: Ink.Stroke.Builder? = null
@@ -41,9 +46,12 @@ class HandwritingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         var y = lineHeight
+        var lineNumber = 1
         while (y < height) {
-            canvas.drawLine(0f, y, width.toFloat(), y, linePaint)
+            canvas.drawLine(80f, y, width.toFloat(), y, linePaint) // Line starts after numbers
+            canvas.drawText(lineNumber.toString(), 20f, y - 10f, numberPaint)
             y += lineHeight
+            lineNumber++
         }
         canvas.drawPath(path, paint)
     }

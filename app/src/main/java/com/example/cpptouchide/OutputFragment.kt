@@ -32,7 +32,7 @@ class OutputFragment : Fragment() {
         view.findViewById<MaterialButton>(R.id.btnRun).setOnClickListener {
             val code = viewModel.currentCode.value ?: ""
             if (code.isBlank()) {
-                tvOutput.text = "> No code to run. Write something first!"
+                tvOutput.text = "> Error: No code to run."
                 return@setOnClickListener
             }
             runCode(code)
@@ -40,11 +40,11 @@ class OutputFragment : Fragment() {
     }
 
     private fun runCode(code: String) {
-        tvOutput.text = "> Compiling...\n"
+        tvOutput.text = "> Sending to compiler...\n"
         
         val json = JSONObject().apply {
             put("language", "c++")
-            put("version", "*") // Using "*" fixes the version error
+            put("version", "10.2.0")
             put("files", JSONArray().put(JSONObject().put("content", code)))
         }
 
@@ -52,14 +52,14 @@ class OutputFragment : Fragment() {
         val request = Request.Builder()
             .url("https://emkc.org/api/v2/piston/execute")
             .post(requestBody)
-            .header("User-Agent", "Mozilla/5.0 (Android)")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (isAdded) {
                     requireActivity().runOnUiThread { 
-                        tvOutput.text = "> Network Error: ${e.message}\n> Are you connected to the internet?" 
+                        tvOutput.text = "> NETWORK ERROR:\n${e.message}\n\nCheck your internet connection." 
                     }
                 }
             }
@@ -71,31 +71,38 @@ class OutputFragment : Fragment() {
                         if (responseData != null) {
                             try {
                                 val jsonRes = JSONObject(responseData)
-                                val sb = StringBuilder("> Output:\n\n")
+                                val sb = StringBuilder("> COMPILE SUCCESS\n\n")
+                                var hasOutput = false
                                 
                                 jsonRes.optJSONObject("compile")?.let {
-                                    if (it.optString("stderr").isNotBlank()) {
-                                        sb.append("COMPILE ERROR:\n").append(it.optString("stderr")).append("\n")
+                                    val stderr = it.optString("stderr")
+                                    if (stderr.isNotBlank()) {
+                                        sb.append("COMPILE ERROR:\n$stderr\n")
+                                        hasOutput = true
                                     }
                                 }
                                 jsonRes.optJSONObject("run")?.let {
-                                    if (it.optString("stdout").isNotBlank()) {
-                                        sb.append(it.optString("stdout"))
+                                    val stdout = it.optString("stdout")
+                                    val stderr = it.optString("stderr")
+                                    if (stdout.isNotBlank()) {
+                                        sb.append("OUTPUT:\n$stdout\n")
+                                        hasOutput = true
                                     }
-                                    if (it.optString("stderr").isNotBlank()) {
-                                        sb.append("RUNTIME ERROR:\n").append(it.optString("stderr"))
+                                    if (stderr.isNotBlank()) {
+                                        sb.append("RUNTIME ERROR:\n$stderr\n")
+                                        hasOutput = true
                                     }
                                 }
                                 
-                                if (sb.length < 15) {
-                                    sb.append("> Program ran successfully, but printed no output.")
+                                if (!hasOutput) {
+                                    sb.append("> Program executed, but printed nothing.\n")
                                 }
                                 tvOutput.text = sb.toString()
                             } catch (e: Exception) {
-                                tvOutput.text = "> Error parsing server response.\n$responseData"
+                                tvOutput.text = "> SERVER ERROR:\n$responseData"
                             }
                         } else {
-                            tvOutput.text = "> Error: Empty response from server."
+                            tvOutput.text = "> Error: Server returned empty response."
                         }
                     }
                 }

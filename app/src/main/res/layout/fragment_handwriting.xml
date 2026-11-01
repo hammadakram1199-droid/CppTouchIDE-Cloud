@@ -16,7 +16,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recognize &amp; Send to Code" />
+            android:text="Recognize Code" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -26,10 +26,13 @@
             android:text="Clear" />
     </LinearLayout>
 
-    <com.example.cpptouchide.HandwritingView
-        android:id="@+id/handwritingView"
+    <!-- Scrollable Handwriting with 300 Lines -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#111111" />
+        android:layout_height="match_parent">
+        <com.example.cpptouchide.HandwritingView
+            android:id="@+id/handwritingView"
+            android:layout_width="match_parent"
+            android:layout_height="18000dp" /> <!-- 300 lines * 60dp height -->
+    </ScrollView>
 </LinearLayout>

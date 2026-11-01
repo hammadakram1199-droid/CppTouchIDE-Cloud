@@ -14,14 +14,50 @@
         app:title="C++ IDE Pro"
         app:titleTextColor="#FFFFFF" />
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
+    <!-- Beautiful Button Tabs -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#252526"
-        app:tabIndicatorColor="#00FF88"
-        app:tabSelectedTextColor="#00FF88"
-        app:tabTextColor="#AAAAAA" />
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#1E1E1E">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTabHandwriting"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="Handwriting"
+            android:textSize="12sp"
+            app:backgroundTint="#00FF88"
+            android:textColor="#000000"
+            app:cornerRadius="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTabCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:text="Code"
+            android:textSize="12sp"
+            app:backgroundTint="#333333"
+            android:textColor="#FFFFFF"
+            app:cornerRadius="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTabOutput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="Output"
+            android:textSize="12sp"
+            app:backgroundTint="#333333"
+            android:textColor="#FFFFFF"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
