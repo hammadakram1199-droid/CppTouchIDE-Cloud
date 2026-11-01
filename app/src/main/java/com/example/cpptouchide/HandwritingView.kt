@@ -11,25 +11,41 @@ import android.view.View
 import com.google.mlkit.vision.digitalink.Ink
 
 class HandwritingView @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
     private val paint = Paint().apply {
         color = Color.WHITE
-        strokeWidth = 6f
+        strokeWidth = 5f
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
         isAntiAlias = true
     }
 
+    private val linePaint = Paint().apply {
+        color = 0xFF444444.toInt() // Dark grey lines
+        strokeWidth = 2f
+    }
+
     private val path = Path()
     private var lastX = 0f
     private var lastY = 0f
+    private val lineHeight = 60f // Pixels between lines
+
     private var inkBuilder = Ink.builder()
     private var strokeBuilder: Ink.Stroke.Builder? = null
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        // Draw 300 horizontal lines
+        var y = lineHeight
+        while (y < height) {
+            canvas.drawLine(0f, y, width.toFloat(), y, linePaint)
+            y += lineHeight
+        }
+        canvas.drawPath(path, paint)
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val x = event.x
@@ -38,8 +54,7 @@ class HandwritingView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                path.moveTo(x, y)
-                lastX = x; lastY = y
+                path.moveTo(x, y); lastX = x; lastY = y
                 strokeBuilder = Ink.Stroke.builder()
                 strokeBuilder?.addPoint(Ink.Point.create(x, y, t))
             }
@@ -57,11 +72,6 @@ class HandwritingView @JvmOverloads constructor(
         }
         invalidate()
         return true
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        canvas.drawPath(path, paint)
     }
 
     fun clear() {
