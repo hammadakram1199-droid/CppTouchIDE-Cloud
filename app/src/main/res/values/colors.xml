@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_dark">#1E1E1E</color>
-    <color name="bg_surface">#252526</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_accent">#00FF88</color>
     <color name="editor_bg">#1E1E1E</color>
+    <color name="panel_bg">#252526</color>
+    <color name="editor_text">#D4D4D4</color>
+    <color name="gutter_text">#858585</color>
+    <color name="accent">#00FF88</color>
+    <color name="tab_inactive">#333333</color>
+    <color name="stroke_gray">#555555</color>
+    <color name="console_green">#00FF00</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
 </resources>

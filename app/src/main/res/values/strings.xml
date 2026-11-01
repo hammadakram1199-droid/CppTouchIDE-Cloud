@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">C++ IDE Pro</string>
+    <string name="tab_handwriting">Handwriting</string>
+    <string name="tab_code">Code</string>
+    <string name="tab_output">Output</string>
+    <string name="menu_save">Save Project</string>
+    <string name="menu_load">Load Project</string>
+    <string name="recognize_code">Recognize Code</string>
+    <string name="clear">Clear</string>
+    <string name="mode_draw">Mode: Draw</string>
+    <string name="mode_scroll">Mode: Scroll</string>
+    <string name="run_code">Run Code</string>
+    <string name="code_hint">Write C++ here, e.g. #include &lt;iostream&gt;</string>
+    <string name="handwriting_hint">Write one line of code per ruled line. Stylus always draws.</string>
+    <string-array name="cpp_symbols">
+        <item>{</item><item>}</item><item>(</item><item>)</item><item>;</item>
+        <item>&lt;</item><item>&gt;</item><item>#</item><item>\"</item>
+    </string-array>
 </resources>

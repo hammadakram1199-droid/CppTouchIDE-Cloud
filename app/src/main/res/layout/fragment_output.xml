@@ -1,28 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#050505"
-    android:padding="16dp">
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnRun"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="Run C++ Code" />
-
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/black" android:orientation="vertical">
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRun" style="@style/Widget.CppIde.ActionButton"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:text="@string/run_code" android:textColor="@color/black"
+            app:backgroundTint="@color/accent" app:icon="@android:drawable/ic_media_play"
+            app:iconGravity="textStart" app:iconTint="@color/black" />
+    </LinearLayout>
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progress" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:indeterminate="true"
+        android:visibility="gone" app:indicatorColor="@color/accent" />
     <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:id="@+id/outputScroll" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
         <TextView
-            android:id="@+id/tvOutput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:textColor="#00FF00"
-            android:textSize="15sp"
-            android:text="> Ready to compile..." />
+            android:id="@+id/tvOutput" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:fontFamily="monospace"
+            android:padding="12dp" android:textColor="@color/console_green"
+            android:textIsSelectable="true" android:textSize="14sp" />
     </ScrollView>
 </LinearLayout>
