@@ -31,7 +31,9 @@ class HandwritingView @JvmOverloads constructor(
     private val path = Path()
     private var lastX = 0f
     private var lastY = 0f
-    private val lineHeight = 60f
+    
+    // DOUBLED the line height from 60f to 120f
+    private val lineHeight = 120f 
 
     private var inkBuilder = Ink.builder()
     private var strokeBuilder: Ink.Stroke.Builder? = null

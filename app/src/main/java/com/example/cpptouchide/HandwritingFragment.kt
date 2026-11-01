@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
@@ -42,15 +43,20 @@ class HandwritingFragment : Fragment() {
             
             val rec = recognizer
             if (rec == null) {
-                Toast.makeText(context, "Handwriting model not ready yet. Check internet.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Model not ready. Check internet.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             rec.recognize(ink).addOnSuccessListener { result ->
                 if (result.candidates.isNotEmpty()) {
                     viewModel.appendCode(result.candidates[0].text)
-                    Toast.makeText(context, "Added to Code tab!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Added to Code!", Toast.LENGTH_SHORT).show()
                     handwritingView.clear()
+                    
+                    // Auto-switch to the Code tab (Position 1)
+                    val viewPager = activity?.findViewById<ViewPager2>(R.id.viewPager)
+                    viewPager?.setCurrentItem(1, true)
+                    
                 }
             }.addOnFailureListener {
                 Toast.makeText(context, "Recognition failed", Toast.LENGTH_SHORT).show()
@@ -66,8 +72,6 @@ class HandwritingFragment : Fragment() {
                 com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions.builder(model).build()
             )
             RemoteModelManager.getInstance().download(model, DownloadConditions.Builder().build())
-        } catch (e: Exception) {
-            // Prevent crash if Google Play Services is missing or fails
-        }
+        } catch (e: Exception) {}
     }
 }

@@ -30,16 +30,21 @@ class OutputFragment : Fragment() {
         tvOutput = view.findViewById(R.id.tvOutput)
         
         view.findViewById<MaterialButton>(R.id.btnRun).setOnClickListener {
-            val code = viewModel.currentCode.value ?: return@setOnClickListener
+            val code = viewModel.currentCode.value ?: ""
+            if (code.isBlank()) {
+                tvOutput.text = "> No code to run. Write something first!"
+                return@setOnClickListener
+            }
             runCode(code)
         }
     }
 
     private fun runCode(code: String) {
-        tvOutput.text = "> Compiling and running...\n"
+        tvOutput.text = "> Compiling...\n"
+        
         val json = JSONObject().apply {
             put("language", "c++")
-            put("version", "10.2.0")
+            put("version", "*") // Using "*" fixes the version error
             put("files", JSONArray().put(JSONObject().put("content", code)))
         }
 
@@ -47,31 +52,50 @@ class OutputFragment : Fragment() {
         val request = Request.Builder()
             .url("https://emkc.org/api/v2/piston/execute")
             .post(requestBody)
-            .header("User-Agent", "Mozilla/5.0") // FIX FOR NOT WHITELISTED
+            .header("User-Agent", "Mozilla/5.0 (Android)")
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                requireActivity().runOnUiThread { tvOutput.text = "> Error: ${e.message}" }
+                if (isAdded) {
+                    requireActivity().runOnUiThread { 
+                        tvOutput.text = "> Network Error: ${e.message}\n> Are you connected to the internet?" 
+                    }
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val responseData = response.body?.string()
-                requireActivity().runOnUiThread {
-                    if (responseData != null) {
-                        try {
-                            val jsonRes = JSONObject(responseData)
-                            val sb = StringBuilder("> Output:\n\n")
-                            jsonRes.optJSONObject("compile")?.let {
-                                if (it.optString("stderr").isNotBlank()) sb.append(it.optString("stderr")).append("\n")
+                if (isAdded) {
+                    requireActivity().runOnUiThread {
+                        if (responseData != null) {
+                            try {
+                                val jsonRes = JSONObject(responseData)
+                                val sb = StringBuilder("> Output:\n\n")
+                                
+                                jsonRes.optJSONObject("compile")?.let {
+                                    if (it.optString("stderr").isNotBlank()) {
+                                        sb.append("COMPILE ERROR:\n").append(it.optString("stderr")).append("\n")
+                                    }
+                                }
+                                jsonRes.optJSONObject("run")?.let {
+                                    if (it.optString("stdout").isNotBlank()) {
+                                        sb.append(it.optString("stdout"))
+                                    }
+                                    if (it.optString("stderr").isNotBlank()) {
+                                        sb.append("RUNTIME ERROR:\n").append(it.optString("stderr"))
+                                    }
+                                }
+                                
+                                if (sb.length < 15) {
+                                    sb.append("> Program ran successfully, but printed no output.")
+                                }
+                                tvOutput.text = sb.toString()
+                            } catch (e: Exception) {
+                                tvOutput.text = "> Error parsing server response.\n$responseData"
                             }
-                            jsonRes.optJSONObject("run")?.let {
-                                if (it.optString("stdout").isNotBlank()) sb.append(it.optString("stdout"))
-                                if (it.optString("stderr").isNotBlank()) sb.append(it.optString("stderr"))
-                            }
-                            tvOutput.text = sb.toString()
-                        } catch (e: Exception) {
-                            tvOutput.text = "> Error parsing response."
+                        } else {
+                            tvOutput.text = "> Error: Empty response from server."
                         }
                     }
                 }
