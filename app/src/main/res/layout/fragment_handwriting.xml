@@ -29,11 +29,13 @@
             app:cornerRadius="8dp" />
     </LinearLayout>
 
-    <!-- Directly on the screen, no ScrollView to steal touches -->
-    <com.example.cpptouchide.HandwritingView
-        android:id="@+id/handwritingView"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#111111" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+        <com.example.cpptouchide.HandwritingView
+            android:id="@+id/handwritingView"
+            android:layout_width="match_parent"
+            android:layout_height="4000dp" />
+    </ScrollView>
 </LinearLayout>

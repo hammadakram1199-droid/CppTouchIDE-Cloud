@@ -32,7 +32,7 @@ class OutputFragment : Fragment() {
         view.findViewById<MaterialButton>(R.id.btnRun).setOnClickListener {
             val code = viewModel.currentCode.value ?: ""
             if (code.isBlank()) {
-                tvOutput.text = "> Error: No code to run."
+                tvOutput.text = "> Error: Code is empty."
                 return@setOnClickListener
             }
             runCode(code)
@@ -40,7 +40,7 @@ class OutputFragment : Fragment() {
     }
 
     private fun runCode(code: String) {
-        tvOutput.text = "> Connecting to compiler...\n"
+        tvOutput.text = "> Compiling and running...\n"
         
         val json = JSONObject().apply {
             put("language", "c++")
@@ -52,14 +52,14 @@ class OutputFragment : Fragment() {
         val request = Request.Builder()
             .url("https://emkc.org/api/v2/piston/execute")
             .post(requestBody)
-            .header("User-Agent", "Mozilla/5.0")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 if (isAdded) {
                     requireActivity().runOnUiThread { 
-                        tvOutput.text = "> NETWORK ERROR:\n${e.message}\n\nMake sure you are connected to the internet." 
+                        tvOutput.text = "> NETWORK ERROR:\n${e.message}\n\nPlease check your internet connection." 
                     }
                 }
             }
@@ -73,13 +73,11 @@ class OutputFragment : Fragment() {
                                 val jsonRes = JSONObject(responseData)
                                 val sb = StringBuilder()
                                 
-                                // Parse Compile Errors
                                 jsonRes.optJSONObject("compile")?.let {
                                     val stderr = it.optString("stderr")
                                     if (stderr.isNotBlank()) sb.append("COMPILE ERROR:\n$stderr\n\n")
                                 }
                                 
-                                // Parse Run Output
                                 jsonRes.optJSONObject("run")?.let {
                                     val stdout = it.optString("stdout")
                                     val stderr = it.optString("stderr")
