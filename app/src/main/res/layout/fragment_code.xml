@@ -38,8 +38,7 @@
             android:textColor="#D4D4D4"
             android:textSize="15sp"
             android:inputType="textMultiLine|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:text="#include <iostream>\n\nint main() {\n    std::cout << &quot;Hello World!&quot;;\n    return 0;\n}" />
+            android:scrollbars="vertical" />
     </LinearLayout>
 
     <!-- Bottom Symbol Bar -->
