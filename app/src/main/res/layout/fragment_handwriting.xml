@@ -3,21 +3,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_dark">
+    android:background="@color/bg_dark"
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp">
-
+        android:layout_marginBottom="8dp">
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRecognize"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recognize to Code" />
-
+            android:text="Recognize & Add to Code" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -27,14 +26,10 @@
             android:text="Clear" />
     </LinearLayout>
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
-
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
         <com.example.cpptouchide.HandwritingView
             android:id="@+id/handwritingView"
             android:layout_width="match_parent"
-            android:layout_height="18000dp" /> <!-- ~300 lines at 60dp each -->
+            android:layout_height="18000dp" /> <!-- 300 lines -->
     </ScrollView>
 </LinearLayout>

@@ -31,9 +31,7 @@ class HandwritingFragment : Fragment() {
 
         initModel()
 
-        view.findViewById<MaterialButton>(R.id.btnClear).setOnClickListener {
-            handwritingView.clear()
-        }
+        view.findViewById<MaterialButton>(R.id.btnClear).setOnClickListener { handwritingView.clear() }
 
         view.findViewById<MaterialButton>(R.id.btnRecognize).setOnClickListener {
             val ink = handwritingView.getInk()
@@ -43,8 +41,7 @@ class HandwritingFragment : Fragment() {
             }
             recognizer.recognize(ink).addOnSuccessListener { result ->
                 if (result.candidates.isNotEmpty()) {
-                    val text = result.candidates[0].text
-                    viewModel.appendCode("\n$text\n")
+                    viewModel.appendCode(result.candidates[0].text)
                     Toast.makeText(context, "Added to Code tab!", Toast.LENGTH_SHORT).show()
                     handwritingView.clear()
                 }
@@ -60,7 +57,6 @@ class HandwritingFragment : Fragment() {
         recognizer = DigitalInkRecognition.getClient(
             com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions.builder(model).build()
         )
-        val remoteModelManager = RemoteModelManager.getInstance()
-        remoteModelManager.download(model, DownloadConditions.Builder().build())
+        RemoteModelManager.getInstance().download(model, DownloadConditions.Builder().build())
     }
 }

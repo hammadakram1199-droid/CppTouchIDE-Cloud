@@ -26,27 +26,23 @@ class HandwritingView @JvmOverloads constructor(
     private val linePaint = Paint().apply {
         color = 0xFF333333.toInt()
         strokeWidth = 2f
-        style = Paint.Style.STROKE
     }
 
     private val path = Path()
     private var lastX = 0f
     private var lastY = 0f
-    private val lineHeight = 60f // Pixels between lines
+    private val lineHeight = 60f
 
     private var inkBuilder = Ink.builder()
     private var strokeBuilder: Ink.Stroke.Builder? = null
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        
-        // Draw notebook lines
         var y = lineHeight
         while (y < height) {
             canvas.drawLine(0f, y, width.toFloat(), y, linePaint)
             y += lineHeight
         }
-        
         canvas.drawPath(path, paint)
     }
 

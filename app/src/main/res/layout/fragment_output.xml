@@ -3,29 +3,26 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg_dark"
-    android:padding="8dp">
+    android:background="#050505"
+    android:padding="16dp">
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRun"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:text="Run C++ Code" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:background="@color/output_bg">
-
+        android:layout_height="match_parent">
         <TextView
             android:id="@+id/tvOutput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp"
             android:fontFamily="monospace"
-            android:textColor="@color/output_text"
-            android:textSize="13sp" />
+            android:textColor="#00FF00"
+            android:textSize="15sp"
+            android:text="> Ready to compile..." />
     </ScrollView>
 </LinearLayout>
