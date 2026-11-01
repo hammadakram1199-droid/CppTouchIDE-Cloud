@@ -4,35 +4,36 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#1E1E1E"
-    android:padding="8dp">
+    android:padding="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="12dp">
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRecognize"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recognize Code" />
+            android:text="Recognize Code"
+            app:cornerRadius="12dp" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="Clear" />
+            android:text="Clear"
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
-    <!-- Scrollable Handwriting with 300 Lines -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <com.example.cpptouchide.HandwritingView
             android:id="@+id/handwritingView"
             android:layout_width="match_parent"
-            android:layout_height="18000dp" /> <!-- 300 lines * 60dp height -->
+            android:layout_height="4800dp" /> <!-- Perfect size for 80 lines -->
     </ScrollView>
 </LinearLayout>

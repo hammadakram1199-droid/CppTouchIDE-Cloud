@@ -5,7 +5,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 class MainViewModel : ViewModel() {
-    private val _currentCode = MutableLiveData<String>("#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\";\n    return 0;\n}")
+    private val _currentCode = MutableLiveData<String>(
+        "#include <iostream>\n\nint main() {\n    std::cout << \"Hello from C++ IDE!\" << std::endl;\n    return 0;\n}"
+    )
     val currentCode: LiveData<String> get() = _currentCode
 
     fun updateCode(code: String) { _currentCode.value = code }

@@ -24,7 +24,7 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private val linePaint = Paint().apply {
-        color = 0xFF333333.toInt()
+        color = 0xFF444444.toInt()
         strokeWidth = 2f
     }
 
@@ -38,7 +38,7 @@ class HandwritingView @JvmOverloads constructor(
     private var lastX = 0f
     private var lastY = 0f
     
-    private val lineHeight = 60f
+    private val lineHeight = 60f 
 
     private var inkBuilder = Ink.builder()
     private var strokeBuilder: Ink.Stroke.Builder? = null
@@ -48,7 +48,7 @@ class HandwritingView @JvmOverloads constructor(
         var y = lineHeight
         var lineNumber = 1
         while (y < height) {
-            canvas.drawLine(80f, y, width.toFloat(), y, linePaint) // Line starts after numbers
+            canvas.drawLine(80f, y, width.toFloat(), y, linePaint) 
             canvas.drawText(lineNumber.toString(), 20f, y - 10f, numberPaint)
             y += lineHeight
             lineNumber++
@@ -57,6 +57,9 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // This stops the ScrollView from stealing your touch while drawing
+        parent?.requestDisallowInterceptTouchEvent(true)
+
         val x = event.x
         val y = event.y
         val t = System.currentTimeMillis()

@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
         btnOutput = findViewById(R.id.btnTabOutput)
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         
-        // DISABLE SWIPING
         viewPager.isUserInputEnabled = false 
 
         toolbar.inflateMenu(R.menu.main_menu)
@@ -61,25 +60,32 @@ class MainActivity : AppCompatActivity() {
         btnCode.setOnClickListener { selectTab(1) }
         btnOutput.setOnClickListener { selectTab(2) }
 
-        selectTab(0) // Default tab
+        selectTab(0)
     }
 
     private fun selectTab(index: Int) {
         viewPager.setCurrentItem(index, false)
         
-        // Reset all buttons to grey
         btnHandwriting.setBackgroundColor(Color.parseColor("#333333"))
-        btnHandwriting.setTextColor(Color.WHITE)
+        btnHandwriting.setIconTint(android.content.res.ColorStateList.valueOf(Color.WHITE))
         btnCode.setBackgroundColor(Color.parseColor("#333333"))
         btnCode.setTextColor(Color.WHITE)
         btnOutput.setBackgroundColor(Color.parseColor("#333333"))
         btnOutput.setTextColor(Color.WHITE)
 
-        // Highlight selected button
         when (index) {
-            0 -> { btnHandwriting.setBackgroundColor(Color.parseColor("#00FF88")); btnHandwriting.setTextColor(Color.BLACK) }
-            1 -> { btnCode.setBackgroundColor(Color.parseColor("#00FF88")); btnCode.setTextColor(Color.BLACK) }
-            2 -> { btnOutput.setBackgroundColor(Color.parseColor("#00FF88")); btnOutput.setTextColor(Color.BLACK) }
+            0 -> { 
+                btnHandwriting.setBackgroundColor(Color.parseColor("#00FF88")) 
+                btnHandwriting.setIconTint(android.content.res.ColorStateList.valueOf(Color.BLACK))
+            }
+            1 -> { 
+                btnCode.setBackgroundColor(Color.parseColor("#00FF88")) 
+                btnCode.setTextColor(Color.BLACK) 
+            }
+            2 -> { 
+                btnOutput.setBackgroundColor(Color.parseColor("#00FF88")) 
+                btnOutput.setTextColor(Color.BLACK) 
+            }
         }
     }
 
