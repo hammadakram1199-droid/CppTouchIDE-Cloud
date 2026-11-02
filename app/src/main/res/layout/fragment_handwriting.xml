@@ -4,32 +4,53 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/editor_bg" android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvStatus" android:layout_width="match_parent"
-        android:layout_height="wrap_content" android:background="@color/panel_bg"
-        android:paddingStart="12dp" android:paddingTop="6dp" android:paddingEnd="12dp"
-        android:paddingBottom="6dp" android:text="Write code here with your stylus."
-        android:textColor="@color/gutter_text" android:textSize="12sp" />
+    <!-- Top Bar: Toggle Mode -->
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
+        
+        <TextView
+            android:id="@+id/tvStatus" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:layout_gravity="center_vertical"
+            android:text="Mode: Pen (Draw Code)" android:textColor="@color/editor_text" android:textSize="14sp" />
 
-    <!-- Full screen notebook canvas -->
-    <ScrollView
-        android:id="@+id/handwritingScroll" android:layout_width="match_parent"
-        android:layout_height="0dp" android:layout_weight="1"
-        android:overScrollMode="never" android:scrollbars="vertical">
-        <com.example.cppidepro.HandwritingView
-            android:id="@+id/handwritingView" android:layout_width="match_parent"
-            android:layout_height="4000dp" />
-    </ScrollView>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToggleMode" style="@style/Widget.CppIde.OutlinedButton"
+            android:layout_width="wrap_content" android:layout_height="40dp"
+            android:text="Switch to Text" android:textSize="12sp" />
+    </LinearLayout>
 
+    <!-- Container for Canvas and Text Editor -->
+    <FrameLayout
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+
+        <!-- Pen Mode: Massive Canvas with Lines and Numbers -->
+        <ScrollView
+            android:id="@+id/handwritingScroll" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:overScrollMode="never" android:scrollbars="vertical">
+            <com.example.cppidepro.HandwritingView
+                android:id="@+id/handwritingView" android:layout_width="match_parent"
+                android:layout_height="4000dp" />
+        </ScrollView>
+
+        <!-- Text Mode: Normal Code Editor with Default Code -->
+        <EditText
+            android:id="@+id/etHandwrittenCode"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="#1E1E1E" android:fontFamily="monospace" android:gravity="top|start"
+            android:padding="12dp" android:textColor="@color/editor_text" android:textSize="15sp"
+            android:inputType="textMultiLine|textNoSuggestions" android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Bottom Bar: Actions -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
         
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRecognize" style="@style/Widget.CppIde.ActionButton"
-            android:layout_width="0dp" android:layout_height="48dp"
-            android:layout_weight="1" android:text="Recognize &amp; Send to Code"
-            android:textColor="@color/black" app:backgroundTint="@color/accent" />
+            android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1"
+            android:text="Recognize Pen" android:textColor="@color/black" app:backgroundTint="@color/accent" />
             
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear" style="@style/Widget.CppIde.OutlinedButton"

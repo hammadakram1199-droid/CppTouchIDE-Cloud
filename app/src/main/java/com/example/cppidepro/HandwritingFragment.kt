@@ -23,6 +23,7 @@ class HandwritingFragment : Fragment() {
     private val viewModel: MainViewModel by activityViewModels()
     private var recognizer: DigitalInkRecognizer? = null
     private var modelReady = false
+    private var isPenMode = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -32,9 +33,33 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        binding.btnClear.setOnClickListener { binding.handwritingView.clear() }
+        // Set the default C++ code in the Text Editor
+        binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
+
+        binding.btnClear.setOnClickListener { 
+            binding.handwritingView.clear()
+            binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
+        }
+        
         binding.btnRecognize.setOnClickListener { recognizeInk() }
         
+        binding.btnToggleMode.setOnClickListener {
+            isPenMode = !isPenMode
+            if (isPenMode) {
+                binding.handwritingScroll.visibility = View.VISIBLE
+                binding.etHandwrittenCode.visibility = View.GONE
+                binding.btnToggleMode.text = "Switch to Text"
+                binding.tvStatus.text = "Mode: Pen (Draw Code)"
+                binding.btnRecognize.visibility = View.VISIBLE
+            } else {
+                binding.handwritingScroll.visibility = View.GONE
+                binding.etHandwrittenCode.visibility = View.VISIBLE
+                binding.btnToggleMode.text = "Switch to Pen"
+                binding.tvStatus.text = "Mode: Text (Type Code)"
+                binding.btnRecognize.visibility = View.GONE
+            }
+        }
+
         if (recognizer == null) setupRecognizer()
     }
 
@@ -48,13 +73,13 @@ class HandwritingFragment : Fragment() {
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
                 if (downloaded) { 
                     modelReady = true
-                    binding.tvStatus.text = "Ready to write code."
+                    binding.tvStatus.text = "Ready to draw."
                 } else {
-                    binding.tvStatus.text = "Downloading handwriting model (needs internet)..."
+                    binding.tvStatus.text = "Downloading model (needs internet)..."
                     manager.download(model, DownloadConditions.Builder().build())
                         .addOnSuccessListener { 
                             modelReady = true
-                            binding.tvStatus.text = "Ready to write code."
+                            binding.tvStatus.text = "Ready to draw."
                         }
                 }
             }
@@ -93,14 +118,21 @@ class HandwritingFragment : Fragment() {
     private fun finishRecognition(lines: List<String>) {
         val text = lines.filter { it.isNotBlank() }.joinToString("\n")
         _binding?.btnRecognize?.isEnabled = true
-        _binding?.tvStatus?.text = "Ready to write code."
+        _binding?.tvStatus?.text = "Ready to draw."
         
         if (text.isNotBlank()) {
-            // Append to the shared viewmodel
+            // Append to the text editor
+            val currentText = binding.etHandwrittenCode.text.toString()
+            val separator = if (currentText.isEmpty() || currentText.endsWith("\n")) "" else "\n"
+            binding.etHandwrittenCode.append(separator + text + "\n")
+            
+            // Also update the global ViewModel so it goes to the Code tab
             viewModel.appendCode(text)
             binding.handwritingView.clear()
-            // Automatically switch to the Code tab to show the user
-            viewModel.navigateTo(MainViewModel.TAB_CODE)
+            
+            // Switch to text mode so user can see the result immediately
+            binding.btnToggleMode.performClick()
+            showToast("Recognized and added to text!")
         } else {
             showToast("Could not recognize. Write clearer.")
         }
