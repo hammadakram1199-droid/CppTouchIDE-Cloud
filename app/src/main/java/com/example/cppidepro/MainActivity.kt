@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupPager() {
         binding.pager.adapter = PagerAdapter(this)
         binding.pager.isUserInputEnabled = false
-        binding.pager.offscreenPageLimit = 2 // Keeps handwriting drawings alive
+        binding.pager.offscreenPageLimit = 2
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) { highlightTab(position); hideKeyboard() }
         })
@@ -90,10 +90,14 @@ class MainActivity : AppCompatActivity() {
         webView.loadDataWithBaseURL(null, html, "text/HTML", "UTF-8", null)
         
         webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?) {
-                val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
-                val jobName = "CppIdeProject"
-                printManager.print(jobName, view.createPrintDocumentAdapter(jobName), PrintAttributes.Builder().build())
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // FIX: Use ?.let to safely access the view
+                view?.let {
+                    val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                    val jobName = "CppIdeProject"
+                    printManager.print(jobName, it.createPrintDocumentAdapter(jobName), PrintAttributes.Builder().build())
+                }
             }
         }
     }
