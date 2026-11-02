@@ -44,8 +44,6 @@ class HandwritingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
-
-        // Restore UI
         updateUiForMode()
 
         binding.btnClear.setOnClickListener { 
@@ -63,20 +61,16 @@ class HandwritingFragment : Fragment() {
         binding.btnScrollMode.setOnClickListener {
             if (!isPenMode) return@setOnClickListener
             isScrollMode = !isScrollMode
-            binding.handwritingView.isScrollMode = isScrollMode
             updateUiForMode()
         }
 
-        // --- NEW SCROLL BUTTONS ---
-        // Scrolls by exactly 12 lines (12 * 42dp line height = ~500dp)
-        val scrollAmount = (12 * 42 * resources.displayMetrics.density).toInt()
-
+        // Native Scroll Buttons
         binding.btnScrollDown.setOnClickListener {
-            binding.handwritingScroll.smoothScrollBy(0, scrollAmount)
+            binding.handwritingView.scrollByLines(12)
         }
 
         binding.btnScrollUp.setOnClickListener {
-            binding.handwritingScroll.smoothScrollBy(0, -scrollAmount)
+            binding.handwritingView.scrollByLines(-12)
         }
 
         if (recognizer == null) setupRecognizer()
@@ -84,7 +78,7 @@ class HandwritingFragment : Fragment() {
 
     private fun updateUiForMode() {
         if (isPenMode) {
-            binding.handwritingScroll.visibility = View.VISIBLE
+            binding.handwritingView.visibility = View.VISIBLE
             binding.etHandwrittenCode.visibility = View.GONE
             binding.btnToggleMode.text = "Switch to Text"
             binding.btnRecognize.visibility = View.VISIBLE
@@ -92,14 +86,14 @@ class HandwritingFragment : Fragment() {
             if (isScrollMode) {
                 binding.btnScrollMode.text = "Draw Mode"
                 binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
-                binding.tvStatus.text = "Mode: Scroll (Swipe freely)"
+                binding.tvStatus.text = "Mode: Scroll (Swipe to move)"
             } else {
                 binding.btnScrollMode.text = "Scroll Mode"
                 binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
                 binding.tvStatus.text = "Mode: Pen (Draw Code)"
             }
         } else {
-            binding.handwritingScroll.visibility = View.GONE
+            binding.handwritingView.visibility = View.GONE
             binding.etHandwrittenCode.visibility = View.VISIBLE
             binding.btnToggleMode.text = "Switch to Pen"
             binding.btnRecognize.visibility = View.GONE

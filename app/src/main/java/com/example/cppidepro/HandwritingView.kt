@@ -13,17 +13,15 @@ import android.view.MotionEvent
 import android.view.View
 import com.google.mlkit.vision.digitalink.Ink
 import kotlin.math.ceil
+import kotlin.math.max
 
 class HandwritingView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     
-    // Make InkPoint Parcelable so we can save it during rotation
     class InkPoint(val x: Float, val y: Float, val t: Long) : Parcelable {
         constructor(parcel: Parcel) : this(parcel.readFloat(), parcel.readFloat(), parcel.readLong())
-        override fun writeToParcel(parcel: Parcel, flags: Int) {
-            parcel.writeFloat(x); parcel.writeFloat(y); parcel.writeLong(t)
-        }
+        override fun writeToParcel(parcel: Parcel, flags: Int) { parcel.writeFloat(x); parcel.writeFloat(y); parcel.writeLong(t) }
         override fun describeContents(): Int = 0
         companion object CREATOR : Parcelable.Creator<InkPoint> {
             override fun createFromParcel(parcel: Parcel): InkPoint = InkPoint(parcel)
@@ -52,13 +50,18 @@ class HandwritingView @JvmOverloads constructor(
     var isScrollMode = false 
 
     private val dp = resources.displayMetrics.density
-    private val lineSpacing = 42f * dp 
+    val lineSpacing = 42f * dp 
     private val gutterWidth = 42f * dp 
+    private val totalContentHeight = 20000f // 20000dp tall canvas
     
     private val strokes = ArrayList<StrokeData>()
     private var current: StrokeData? = null
     private var lastX = 0f
     private var lastY = 0f
+    
+    // Scroll variables
+    private var scrollOffsetY = 0f
+    private var lastTouchY = 0f
 
     private val linePaint = Paint().apply { color = Color.parseColor("#444444"); strokeWidth = 1.5f * dp; style = Paint.Style.STROKE }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#1A1A1A") }
@@ -74,51 +77,95 @@ class HandwritingView @JvmOverloads constructor(
         strokeWidth = 2f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
     }
 
+    private val scrollBarPaint = Paint().apply { color = Color.parseColor("#666666") }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#1E1E1E"))
-        canvas.drawRect(0f, 0f, gutterWidth, height.toFloat(), gutterPaint)
         
-        val lineCount = ceil(height / lineSpacing).toInt()
-        for (i in 1..lineCount) {
+        // Draw everything with the scroll offset applied
+        canvas.save()
+        canvas.translate(0f, -scrollOffsetY)
+        
+        canvas.drawRect(0f, 0f, gutterWidth, totalContentHeight, gutterPaint)
+        
+        val startLine = max(1, (scrollOffsetY / lineSpacing).toInt())
+        val endLine = minOf(((scrollOffsetY + height) / lineSpacing).toInt() + 1, (totalContentHeight / lineSpacing).toInt())
+        
+        for (i in startLine..endLine) {
             val y = i * lineSpacing
             canvas.drawLine(gutterWidth, y, width.toFloat(), y, linePaint)
             val centerY = y - (lineSpacing / 2f) + (numberPaint.textSize / 3f)
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
+        
         for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
+        canvas.restore()
+
+        // Draw Scrollbar on the right
+        val scrollBarWidth = 8f * dp
+        val scrollBarX = width - scrollBarWidth
+        val thumbHeight = (height / totalContentHeight) * height
+        val maxScroll = totalContentHeight - height
+        if (maxScroll > 0) {
+            val thumbY = (scrollOffsetY / maxScroll) * (height - thumbHeight)
+            canvas.drawRoundRect(scrollBarX, thumbY, width.toFloat(), thumbY + thumbHeight, 10f, 10f, scrollBarPaint)
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (isScrollMode) return false // Let ScrollView handle it
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                parent?.requestDisallowInterceptTouchEvent(true) 
-                startStroke(event.x, event.y, event.eventTime)
-                return true
-            }
-            MotionEvent.ACTION_MOVE -> {
-                val stroke = current ?: return false
-                parent?.requestDisallowInterceptTouchEvent(true)
-                for (i in 0 until event.historySize) {
-                    extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i), event.getHistoricalEventTime(i))
+        if (isScrollMode) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastTouchY = event.y
+                    return true
                 }
-                extendStroke(stroke, event.x, event.y, event.eventTime)
-                invalidate()
-                return true
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val stroke = current ?: return false
-                if (event.actionMasked == MotionEvent.ACTION_UP) {
-                    extendStroke(stroke, event.x, event.y, event.eventTime)
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = lastTouchY - event.y
+                    updateScroll(scrollOffsetY + dy)
+                    lastTouchY = event.y
+                    return true
                 }
-                current = null
-                parent?.requestDisallowInterceptTouchEvent(false)
-                invalidate()
-                return true
+            }
+            return false
+        } else {
+            // DRAW MODE
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
+                    return true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val stroke = current ?: return false
+                    for (i in 0 until event.historySize) {
+                        extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i) + scrollOffsetY, event.getHistoricalEventTime(i))
+                    }
+                    extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
+                    invalidate()
+                    return true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val stroke = current ?: return false
+                    if (event.actionMasked == MotionEvent.ACTION_UP) {
+                        extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
+                    }
+                    current = null
+                    invalidate()
+                    return true
+                }
             }
         }
         return current != null
+    }
+
+    fun scrollByLines(lines: Int) {
+        updateScroll(scrollOffsetY + (lines * lineSpacing))
+    }
+
+    private fun updateScroll(newY: Float) {
+        val maxScroll = max(0f, totalContentHeight - height)
+        scrollOffsetY = newY.coerceIn(0f, maxScroll)
+        invalidate()
     }
 
     private fun startStroke(x: Float, y: Float, time: Long) {
@@ -161,10 +208,10 @@ class HandwritingView @JvmOverloads constructor(
         }
     }
 
-    // --- ROTATION STATE SAVING ---
     override fun onSaveInstanceState(): Parcelable {
         val bundle = android.os.Bundle()
         bundle.putParcelableArrayList("strokes", strokes)
+        bundle.putFloat("scrollOffsetY", scrollOffsetY)
         bundle.putParcelable("superState", super.onSaveInstanceState())
         return bundle
     }
@@ -175,8 +222,9 @@ class HandwritingView @JvmOverloads constructor(
             if (savedStrokes != null) {
                 strokes.clear()
                 strokes.addAll(savedStrokes)
-                invalidate()
             }
+            scrollOffsetY = state.getFloat("scrollOffsetY", 0f)
+            invalidate()
             super.onRestoreInstanceState(state.getParcelable("superState"))
         } else {
             super.onRestoreInstanceState(state)
