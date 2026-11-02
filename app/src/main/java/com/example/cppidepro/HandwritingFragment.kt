@@ -24,13 +24,11 @@ class HandwritingFragment : Fragment() {
     private var recognizer: DigitalInkRecognizer? = null
     private var modelReady = false
     
-    // Persist these across rotation
     private var isPenMode = true
     private var isScrollMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Restore mode state on rotation
         if (savedInstanceState != null) {
             isPenMode = savedInstanceState.getBoolean("isPenMode", true)
             isScrollMode = savedInstanceState.getBoolean("isScrollMode", false)
@@ -47,30 +45,8 @@ class HandwritingFragment : Fragment() {
         
         binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
 
-        // Restore UI based on saved mode
-        if (isPenMode) {
-            binding.handwritingScroll.visibility = View.VISIBLE
-            binding.etHandwrittenCode.visibility = View.GONE
-            binding.btnToggleMode.text = "Switch to Text"
-            binding.btnRecognize.visibility = View.VISIBLE
-        } else {
-            binding.handwritingScroll.visibility = View.GONE
-            binding.etHandwrittenCode.visibility = View.VISIBLE
-            binding.btnToggleMode.text = "Switch to Pen"
-            binding.btnRecognize.visibility = View.GONE
-        }
-        
-        binding.handwritingView.isScrollMode = isScrollMode
-        if (isScrollMode) {
-            binding.btnScrollMode.text = "Draw Mode"
-            binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
-            binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
-        } else {
-            binding.btnScrollMode.text = "Scroll Mode"
-            binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
-            binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
-        }
-        updateStatusText()
+        // Restore UI
+        updateUiForMode()
 
         binding.btnClear.setOnClickListener { 
             binding.handwritingView.clear()
@@ -81,50 +57,55 @@ class HandwritingFragment : Fragment() {
         
         binding.btnToggleMode.setOnClickListener {
             isPenMode = !isPenMode
-            if (isPenMode) {
-                binding.handwritingScroll.visibility = View.VISIBLE
-                binding.etHandwrittenCode.visibility = View.GONE
-                binding.btnToggleMode.text = "Switch to Text"
-                binding.btnRecognize.visibility = View.VISIBLE
-                updateStatusText()
-            } else {
-                binding.handwritingScroll.visibility = View.GONE
-                binding.etHandwrittenCode.visibility = View.VISIBLE
-                binding.btnToggleMode.text = "Switch to Pen"
-                binding.btnRecognize.visibility = View.GONE
-                binding.tvStatus.text = "Mode: Text Editor"
-            }
+            updateUiForMode()
         }
 
         binding.btnScrollMode.setOnClickListener {
             if (!isPenMode) return@setOnClickListener
-            
             isScrollMode = !isScrollMode
             binding.handwritingView.isScrollMode = isScrollMode
-            
-            if (isScrollMode) {
-                binding.btnScrollMode.text = "Draw Mode"
-                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
-                binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
-            } else {
-                binding.btnScrollMode.text = "Scroll Mode"
-                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
-                binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
-            }
-            updateStatusText()
+            updateUiForMode()
+        }
+
+        // --- NEW SCROLL BUTTONS ---
+        // Scrolls by exactly 12 lines (12 * 42dp line height = ~500dp)
+        val scrollAmount = (12 * 42 * resources.displayMetrics.density).toInt()
+
+        binding.btnScrollDown.setOnClickListener {
+            binding.handwritingScroll.smoothScrollBy(0, scrollAmount)
+        }
+
+        binding.btnScrollUp.setOnClickListener {
+            binding.handwritingScroll.smoothScrollBy(0, -scrollAmount)
         }
 
         if (recognizer == null) setupRecognizer()
     }
 
-    private fun updateStatusText() {
-        if (!isPenMode) {
-            binding.tvStatus.text = "Mode: Text Editor"
-        } else if (isScrollMode) {
-            binding.tvStatus.text = "Mode: Scroll (Swipe to move)"
+    private fun updateUiForMode() {
+        if (isPenMode) {
+            binding.handwritingScroll.visibility = View.VISIBLE
+            binding.etHandwrittenCode.visibility = View.GONE
+            binding.btnToggleMode.text = "Switch to Text"
+            binding.btnRecognize.visibility = View.VISIBLE
+            
+            if (isScrollMode) {
+                binding.btnScrollMode.text = "Draw Mode"
+                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
+                binding.tvStatus.text = "Mode: Scroll (Swipe freely)"
+            } else {
+                binding.btnScrollMode.text = "Scroll Mode"
+                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
+                binding.tvStatus.text = "Mode: Pen (Draw Code)"
+            }
         } else {
-            binding.tvStatus.text = "Mode: Pen (Draw Code)"
+            binding.handwritingScroll.visibility = View.GONE
+            binding.etHandwrittenCode.visibility = View.VISIBLE
+            binding.btnToggleMode.text = "Switch to Pen"
+            binding.btnRecognize.visibility = View.GONE
+            binding.tvStatus.text = "Mode: Text Editor"
         }
+        binding.handwritingView.isScrollMode = isScrollMode
     }
 
     private fun setupRecognizer() {
@@ -135,9 +116,9 @@ class HandwritingFragment : Fragment() {
             
             val manager = RemoteModelManager.getInstance()
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
-                if (downloaded) { modelReady = true; updateStatusText() }
+                if (downloaded) { modelReady = true; updateUiForMode() }
                 else {
-                    manager.download(model, DownloadConditions.Builder().build()).addOnSuccessListener { modelReady = true; updateStatusText() }
+                    manager.download(model, DownloadConditions.Builder().build()).addOnSuccessListener { modelReady = true; updateUiForMode() }
                 }
             }
         } catch (t: Throwable) { binding.tvStatus.text = "Handwriting unavailable." }
@@ -160,13 +141,13 @@ class HandwritingFragment : Fragment() {
         rec.recognize(inks[index]).addOnSuccessListener { result ->
             out.add(result.candidates.firstOrNull()?.text.orEmpty())
             recognizeLine(rec, inks, index + 1, out)
-        }.addOnFailureListener { _binding?.btnRecognize?.isEnabled = true; updateStatusText() }
+        }.addOnFailureListener { _binding?.btnRecognize?.isEnabled = true; updateUiForMode() }
     }
 
     private fun finishRecognition(lines: List<String>) {
         val text = lines.filter { it.isNotBlank() }.joinToString("\n")
         _binding?.btnRecognize?.isEnabled = true
-        updateStatusText()
+        updateUiForMode()
         
         if (text.isNotBlank()) {
             val currentText = binding.etHandwrittenCode.text.toString()
@@ -174,12 +155,11 @@ class HandwritingFragment : Fragment() {
             binding.etHandwrittenCode.append(separator + text + "\n")
             viewModel.appendCode(text)
             binding.handwritingView.clear()
-            if (isPenMode) binding.btnToggleMode.performClick()
+            if (isPenMode) { isPenMode = false; updateUiForMode() }
             Toast.makeText(context, "Recognized!", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Save state when rotating
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("isPenMode", isPenMode)
