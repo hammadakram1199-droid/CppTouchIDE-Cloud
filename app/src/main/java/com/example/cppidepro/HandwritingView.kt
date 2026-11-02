@@ -17,10 +17,12 @@ class HandwritingView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
     private class InkPoint(val x: Float, val y: Float, val t: Long)
     private class StrokeData { val path = Path(); val points = ArrayList<InkPoint>() }
+    
     var fingerDrawingEnabled: Boolean = true
     private val dp = resources.displayMetrics.density
-    private val lineSpacing = 40f * dp
-    private val gutterWidth = 48f * dp
+    private val lineSpacing = 50f * dp // Slightly taller for easier writing
+    private val gutterWidth = 60f * dp // Wider gutter for line numbers
+    
     private val strokes = ArrayList<StrokeData>()
     private var current: StrokeData? = null
     private var lastX = 0f
@@ -29,10 +31,14 @@ class HandwritingView @JvmOverloads constructor(
     private val linePaint = Paint().apply { color = Color.parseColor("#3C3C3C"); strokeWidth = 1f * dp; style = Paint.Style.STROKE }
     private val dividerPaint = Paint().apply { color = Color.parseColor("#6A6A6A"); strokeWidth = 1.5f * dp }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#252526") }
+    
+    // Made the line numbers larger and white for high visibility
     private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#858585"); textAlign = Paint.Align.RIGHT
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)
+        color = Color.parseColor("#FFFFFF") 
+        textAlign = Paint.Align.CENTER
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics)
     }
+    
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#F2F2F2"); style = Paint.Style.STROKE
         strokeWidth = 3f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
@@ -42,13 +48,19 @@ class HandwritingView @JvmOverloads constructor(
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#1E1E1E"))
         canvas.drawRect(0f, 0f, gutterWidth, height.toFloat(), gutterPaint)
+        
         val lineCount = ceil(height / lineSpacing).toInt()
         for (i in 1..lineCount) {
             val y = i * lineSpacing
+            // Draw the horizontal line
             canvas.drawLine(gutterWidth, y, width.toFloat(), y, linePaint)
-            canvas.drawText(i.toString(), gutterWidth - 8f * dp, y - 14f * dp, numberPaint)
+            
+            // Draw the line number (centered vertically between the lines)
+            val centerY = y - (lineSpacing / 2f) + (numberPaint.textSize / 3f)
+            canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
         canvas.drawLine(gutterWidth, 0f, gutterWidth, height.toFloat(), dividerPaint)
+        
         for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
     }
 
@@ -56,7 +68,7 @@ class HandwritingView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val isStylus = event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
-                if ((!fingerDrawingEnabled && !isStylus) || event.x < gutterWidth) return false
+                if (!fingerDrawingEnabled && !isStylus) return false
                 parent?.requestDisallowInterceptTouchEvent(true)
                 startStroke(event.x, event.y, event.eventTime)
                 return true
@@ -76,14 +88,11 @@ class HandwritingView @JvmOverloads constructor(
                 current = null
                 parent?.requestDisallowInterceptTouchEvent(false)
                 invalidate()
-                if (event.actionMasked == MotionEvent.ACTION_UP) performClick()
                 return true
             }
         }
         return current != null
     }
-
-    override fun performClick(): Boolean { super.performClick(); return true }
 
     private fun startStroke(x: Float, y: Float, time: Long) {
         val stroke = StrokeData()

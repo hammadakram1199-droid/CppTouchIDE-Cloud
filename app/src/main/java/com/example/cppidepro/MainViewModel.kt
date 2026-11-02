@@ -33,6 +33,8 @@ class MainViewModel : ViewModel() {
         const val TAB_CODE = 1
         const val TAB_OUTPUT = 2
         const val DEFAULT_OUTPUT = "// Press \"Run Code\" to compile and run your program."
+
+        // Simple, clean C++ code with line numbers that will show up automatically
         val DEFAULT_CODE = """
             #include <iostream>
             using namespace std;
