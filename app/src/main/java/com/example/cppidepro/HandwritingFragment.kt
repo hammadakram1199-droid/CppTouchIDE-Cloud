@@ -24,6 +24,7 @@ class HandwritingFragment : Fragment() {
     private var recognizer: DigitalInkRecognizer? = null
     private var modelReady = false
     private var isPenMode = true
+    private var isScrollMode = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -42,33 +43,58 @@ class HandwritingFragment : Fragment() {
         
         binding.btnRecognize.setOnClickListener { recognizeInk() }
         
+        // Toggle between Pen and Text mode
         binding.btnToggleMode.setOnClickListener {
             isPenMode = !isPenMode
             if (isPenMode) {
-                binding.handwritingView.visibility = View.VISIBLE
+                binding.handwritingScroll.visibility = View.VISIBLE
                 binding.etHandwrittenCode.visibility = View.GONE
                 binding.btnToggleMode.text = "Switch to Text"
-                binding.tvStatus.text = "Mode: Pen (Draw Code)"
                 binding.btnRecognize.visibility = View.VISIBLE
+                updateStatusText()
             } else {
-                binding.handwritingView.visibility = View.GONE
+                binding.handwritingScroll.visibility = View.GONE
                 binding.etHandwrittenCode.visibility = View.VISIBLE
                 binding.btnToggleMode.text = "Switch to Pen"
-                binding.tvStatus.text = "Mode: Text (Type Code)"
                 binding.btnRecognize.visibility = View.GONE
             }
+        }
+
+        // Toggle between Draw and Scroll mode
+        binding.btnScrollMode.setOnClickListener {
+            if (!isPenMode) return@setOnClickListener // Only works in Pen mode
+            
+            isScrollMode = !isScrollMode
+            binding.handwritingView.isScrollMode = isScrollMode
+            
+            if (isScrollMode) {
+                binding.btnScrollMode.text = "Draw Mode"
+                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
+                binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
+            } else {
+                binding.btnScrollMode.text = "Scroll Mode"
+                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
+                binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
+            }
+            updateStatusText()
         }
 
         if (recognizer == null) setupRecognizer()
     }
 
+    private fun updateStatusText() {
+        if (!isPenMode) {
+            binding.tvStatus.text = "Mode: Text Editor"
+        } else if (isScrollMode) {
+            binding.tvStatus.text = "Mode: Scroll (Swipe to move)"
+        } else {
+            binding.tvStatus.text = "Mode: Pen (Draw Code)"
+        }
+    }
+
     private fun setupRecognizer() {
         try {
-            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US")
-            if (identifier == null) {
-                binding.tvStatus.text = "Language not supported."
-                return
-            }
+            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
             val model = DigitalInkRecognitionModel.builder(identifier).build()
             recognizer = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
             
@@ -78,30 +104,25 @@ class HandwritingFragment : Fragment() {
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
                 if (downloaded) { 
                     modelReady = true
-                    binding.tvStatus.text = "Pen Ready. Draw your code."
+                    updateStatusText()
                 } else {
                     binding.tvStatus.text = "Downloading model... Please wait."
                     manager.download(model, DownloadConditions.Builder().build())
                         .addOnSuccessListener { 
                             modelReady = true
-                            binding.tvStatus.text = "Pen Ready. Draw your code."
-                        }
-                        .addOnFailureListener { e ->
-                            binding.tvStatus.text = "Model download failed. Check internet."
+                            updateStatusText()
                         }
                 }
-            }.addOnFailureListener {
-                binding.tvStatus.text = "Could not check model."
             }
         } catch (t: Throwable) {
-            binding.tvStatus.text = "Handwriting requires Google Play Services."
+            binding.tvStatus.text = "Handwriting unavailable."
         }
     }
 
     private fun recognizeInk() {
         val rec = recognizer
         if (rec == null) { showToast("Recognizer not ready."); return }
-        if (!binding.handwritingView.hasInk()) { showToast("Draw something first!"); return }
+        if (!binding.handwritingView.hasInk()) { showToast("Write something first!"); return }
         if (!modelReady) { showToast("Model is downloading. Please wait."); return }
         
         val inks = binding.handwritingView.buildInkPerLine()
@@ -121,14 +142,14 @@ class HandwritingFragment : Fragment() {
             recognizeLine(rec, inks, index + 1, out)
         }.addOnFailureListener { 
             _binding?.btnRecognize?.isEnabled = true
-            _binding?.tvStatus?.text = "Recognition failed."
+            updateStatusText()
         }
     }
 
     private fun finishRecognition(lines: List<String>) {
         val text = lines.filter { it.isNotBlank() }.joinToString("\n")
         _binding?.btnRecognize?.isEnabled = true
-        _binding?.tvStatus?.text = "Pen Ready."
+        updateStatusText()
         
         if (text.isNotBlank()) {
             val currentText = binding.etHandwrittenCode.text.toString()
@@ -138,7 +159,6 @@ class HandwritingFragment : Fragment() {
             viewModel.appendCode(text)
             binding.handwritingView.clear()
             
-            // Auto-switch to text mode to see the result
             if (isPenMode) binding.btnToggleMode.performClick()
             showToast("Recognized!")
         } else {

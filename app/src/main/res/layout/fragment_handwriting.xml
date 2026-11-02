@@ -4,14 +4,20 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/editor_bg" android:orientation="vertical">
 
+    <!-- Top Bar with Scroll Toggle -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
         
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScrollMode" style="@style/Widget.CppIde.ActionButton"
+            android:layout_width="wrap_content" android:layout_height="40dp"
+            android:text="Scroll Mode" android:textColor="@color/black" app:backgroundTint="#FFA500" />
+            
         <TextView
             android:id="@+id/tvStatus" android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:layout_gravity="center_vertical"
-            android:text="Mode: Pen" android:textColor="@color/editor_text" android:textSize="14sp" />
+            android:layout_weight="1" android:layout_gravity="center_vertical" android:layout_marginStart="8dp"
+            android:text="Draw Mode" android:textColor="@color/editor_text" android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnToggleMode" style="@style/Widget.CppIde.OutlinedButton"
@@ -22,7 +28,7 @@
     <FrameLayout
         android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
 
-        <!-- SCROLLVIEW IS BACK! 4000dp tall so you can write a LOT of code -->
+        <!-- 10000dp tall so you can write a MASSIVE amount of code -->
         <ScrollView
             android:id="@+id/handwritingScroll" android:layout_width="match_parent"
             android:layout_height="match_parent" android:fillViewport="true"
@@ -30,7 +36,7 @@
             
             <com.example.cppidepro.HandwritingView
                 android:id="@+id/handwritingView" android:layout_width="match_parent"
-                android:layout_height="4000dp" />
+                android:layout_height="10000dp" />
         </ScrollView>
 
         <EditText
