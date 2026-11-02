@@ -22,7 +22,7 @@ class OutputFragment : Fragment() {
     private var _binding: FragmentOutputBinding? = null
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by activityViewModels()
-    
+
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -54,16 +54,16 @@ class OutputFragment : Fragment() {
         val code = viewModel.code.value.orEmpty()
         if (code.isBlank()) { viewModel.setOutput("Nothing to run. The Code tab is empty."); return }
 
-        // Judge0 API Payload
+        // Wandbox API Payload - no API key needed
         val payload = JSONObject().apply {
-            put("source_code", code)
-            put("language_id", 54) // 54 is C++ (GCC 9.2.0)
+            put("code", code)
+            put("compiler", "gcc-head") // Use the latest GCC for C++
+            put("options", "warning,c++17") // Optional: add compiler flags
         }
         val body = payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-        
-        // wait=true means the API waits for the code to finish before returning
+
         val request = Request.Builder()
-            .url("https://ce.judge0.com/submissions?base64_encoded=false&wait=true")
+            .url("https://wandbox.org/api/compile.json")
             .post(body)
             .header("Content-Type", "application/json")
             .build()
@@ -74,7 +74,7 @@ class OutputFragment : Fragment() {
         currentCall?.cancel()
         val call = client.newCall(request)
         currentCall = call
-        
+
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 viewModel.postRunning(false)
@@ -98,33 +98,32 @@ class OutputFragment : Fragment() {
         if (httpCode !in 200..299) {
             return "Server returned HTTP $httpCode\n$raw"
         }
-        
+
         val root = JSONObject(raw)
         val sb = StringBuilder()
-        
-        // Check compile errors
-        val compileOutput = root.optString("compile_output", "")
-        if (compileOutput.isNotBlank()) {
-            sb.append("── Compilation Error ──\n").append(compileOutput)
+
+        // Wandbox returns compile errors in 'compiler_error'
+        val compilerError = root.optString("compiler_error", "")
+        if (compilerError.isNotBlank()) {
+            sb.append("── Compilation Error ──\n").append(compilerError)
             return sb.toString()
         }
 
-        // Check runtime output
-        val stdout = root.optString("stdout", "")
-        val stderr = root.optString("stderr", "")
-        
-        if (stdout.isNotBlank()) sb.append(stdout)
-        if (stderr.isNotBlank()) {
+        // Wandbox returns program output in 'program_output'
+        val programOutput = root.optString("program_output", "")
+        val programError = root.optString("program_error", "")
+
+        if (programOutput.isNotBlank()) {
+            sb.append(programOutput)
+        }
+        if (programError.isNotBlank()) {
             if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append("\n")
-            sb.append("── Runtime Error ──\n").append(stderr)
+            sb.append("── Runtime Error ──\n").append(programError)
         }
 
-        val status = root.optJSONObject("status")?.optString("description", "")
-        
         if (sb.isBlank()) {
-            sb.append("Program executed, but printed nothing.\nStatus: $status")
+            sb.append("Program executed, but printed nothing.")
         }
-        
         return sb.toString()
     }
 
