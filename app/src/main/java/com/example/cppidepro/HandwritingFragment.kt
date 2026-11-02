@@ -1,6 +1,12 @@
 package com.example.cppidepro
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,17 +29,12 @@ class HandwritingFragment : Fragment() {
     private val viewModel: MainViewModel by activityViewModels()
     private var recognizer: DigitalInkRecognizer? = null
     private var modelReady = false
-    
     private var isPenMode = true
-    private var isScrollMode = false
+    private var isUpdatingFromViewModel = false
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (savedInstanceState != null) {
-            isPenMode = savedInstanceState.getBoolean("isPenMode", true)
-            isScrollMode = savedInstanceState.getBoolean("isScrollMode", false)
-        }
-    }
+    // Simple Undo/Redo tracker
+    private val undoStack = ArrayList<String>()
+    private val redoStack = ArrayList<String>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -43,127 +44,155 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
-        updateUiForMode()
+        // 1. Sync Text Editor with Shared ViewModel
+        viewModel.code.observe(viewLifecycleOwner) { code ->
+            if (binding.etHandwrittenCode.text.toString() != code) {
+                isUpdatingFromViewModel = true
+                binding.etHandwrittenCode.setText(code)
+                isUpdatingFromViewModel = false
+            }
+        }
 
-        binding.btnClear.setOnClickListener { 
+        binding.etHandwrittenCode.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                if (!isUpdatingFromViewModel) undoStack.add(s?.toString() ?: "")
+            }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (!isUpdatingFromViewModel) {
+                    viewModel.setCode(s.toString())
+                }
+            }
+        })
+
+        // 2. Toolbar Buttons
+        binding.btnToggleKeyboard.setOnClickListener { togglePenAndKeyboard() }
+        
+        binding.btnBackspace.setOnClickListener {
+            if (!isPenMode) {
+                // Send a backspace key event to delete letter by letter
+                binding.etHandwrittenCode.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+                binding.etHandwrittenCode.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+            } else {
+                Toast.makeText(context, "Switch to Text Mode to delete letters", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnCopy.setOnClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("code", binding.etHandwrittenCode.text.toString()))
+            Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.btnPaste.setOnClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+            val start = binding.etHandwrittenCode.selectionStart
+            binding.etHandwrittenCode.text.insert(start, text)
+        }
+
+        binding.btnUndo.setOnClickListener {
+            if (undoStack.isNotEmpty()) {
+                redoStack.add(binding.etHandwrittenCode.text.toString())
+                val prev = undoStack.removeAt(undoStack.size - 1)
+                isUpdatingFromViewModel = true
+                binding.etHandwrittenCode.setText(prev)
+                binding.etHandwrittenCode.setSelection(prev.length)
+                isUpdatingFromViewModel = false
+                viewModel.setCode(prev)
+            }
+        }
+
+        binding.btnRedo.setOnClickListener {
+            if (redoStack.isNotEmpty()) {
+                undoStack.add(binding.etHandwrittenCode.text.toString())
+                val next = redoStack.removeAt(redoStack.size - 1)
+                isUpdatingFromViewModel = true
+                binding.etHandwrittenCode.setText(next)
+                binding.etHandwrittenCode.setSelection(next.length)
+                isUpdatingFromViewModel = false
+                viewModel.setCode(next)
+            }
+        }
+
+        binding.btnClear.setOnClickListener {
             binding.handwritingView.clear()
-            binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
+            isUpdatingFromViewModel = true
+            binding.etHandwrittenCode.setText("")
+            isUpdatingFromViewModel = false
+            viewModel.setCode("")
+            Toast.makeText(context, "Cleared", Toast.LENGTH_SHORT).show()
         }
-        
+
+        binding.btnSave.setOnClickListener {
+            Toast.makeText(context, "Project Saved!", Toast.LENGTH_SHORT).show()
+            // MainActivity handles actual save logic
+        }
+
+        // 3. Scroll Buttons
+        binding.btnScrollDown.setOnClickListener { binding.handwritingView.scrollByLines(12) }
+        binding.btnScrollUp.setOnClickListener { binding.handwritingView.scrollByLines(-12) }
+
+        // 4. Recognize
         binding.btnRecognize.setOnClickListener { recognizeInk() }
-        
-        binding.btnToggleMode.setOnClickListener {
-            isPenMode = !isPenMode
-            updateUiForMode()
-        }
 
-        binding.btnScrollMode.setOnClickListener {
-            if (!isPenMode) return@setOnClickListener
-            isScrollMode = !isScrollMode
-            updateUiForMode()
-        }
-
-        binding.btnScrollDown.setOnClickListener {
-            binding.handwritingView.scrollByLines(12)
-        }
-
-        binding.btnScrollUp.setOnClickListener {
-            binding.handwritingView.scrollByLines(-12)
-        }
-
-        // Auto start downloading the model on load
         setupRecognizer()
+        updateUiMode()
     }
 
-    private fun updateUiForMode() {
+    private fun togglePenAndKeyboard() {
+        isPenMode = !isPenMode
+        updateUiMode()
+    }
+
+    private fun updateUiMode() {
         if (isPenMode) {
             binding.handwritingView.visibility = View.VISIBLE
             binding.etHandwrittenCode.visibility = View.GONE
-            binding.btnToggleMode.text = "Switch to Text"
-            
-            if (isScrollMode) {
-                binding.btnScrollMode.text = "Draw Mode"
-                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
-                binding.tvStatus.text = "Mode: Scroll (Swipe to move)"
-            } else {
-                binding.btnScrollMode.text = "Scroll Mode"
-                binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
-                binding.tvStatus.text = "Mode: Pen (Draw Code)"
-            }
+            binding.btnToggleKeyboard.setImageResource(android.R.drawable.ic_menu_edit) // Pen icon
         } else {
             binding.handwritingView.visibility = View.GONE
             binding.etHandwrittenCode.visibility = View.VISIBLE
-            binding.btnToggleMode.text = "Switch to Pen"
-            binding.tvStatus.text = "Mode: Text Editor"
-        }
-        binding.handwritingView.isScrollMode = isScrollMode
-        
-        // If the model isn't ready yet, disable the Recognize button
-        if (!modelReady) {
-            binding.btnRecognize.isEnabled = false
+            binding.btnToggleKeyboard.setImageResource(android.R.drawable.ic_menu_view) // Keyboard icon
         }
     }
 
     private fun setupRecognizer() {
         try {
-            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US")
-            if (identifier == null) {
-                binding.tvStatus.text = "Language not supported."
-                binding.btnRecognize.isEnabled = false
-                return
-            }
+            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
             val model = DigitalInkRecognitionModel.builder(identifier).build()
             recognizer = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
             
             val manager = RemoteModelManager.getInstance()
-            
-            // 1. Check if it's already downloaded
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
-                if (downloaded) {
-                    modelReady = true
-                    binding.btnRecognize.isEnabled = true
-                    binding.btnRecognize.text = "Recognize Pen"
-                } else {
-                    // 2. Download it automatically
-                    binding.btnRecognize.text = "Downloading Model..."
+                if (downloaded) { modelReady = true; binding.btnRecognize.isEnabled = true }
+                else {
+                    binding.btnRecognize.text = "Downloading..."
                     binding.btnRecognize.isEnabled = false
-                    
-                    manager.download(model, DownloadConditions.Builder().build())
-                        .addOnSuccessListener {
-                            modelReady = true
-                            binding.btnRecognize.isEnabled = true
-                            binding.btnRecognize.text = "Recognize Pen"
-                            Toast.makeText(context, "Handwriting model ready!", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener { e ->
-                            binding.btnRecognize.text = "Download Failed"
-                            binding.tvStatus.text = "Error: ${e.message}"
-                        }
+                    manager.download(model, DownloadConditions.Builder().build()).addOnSuccessListener { 
+                        modelReady = true
+                        binding.btnRecognize.isEnabled = true
+                        binding.btnRecognize.text = "Recognize Pen"
+                    }
                 }
             }
         } catch (t: Throwable) {
-            binding.tvStatus.text = "Handwriting requires Google Play Services."
             binding.btnRecognize.isEnabled = false
         }
     }
 
     private fun recognizeInk() {
         val rec = recognizer ?: return
-        if (!modelReady) { 
-            Toast.makeText(context, "Please wait, model is still downloading...", Toast.LENGTH_SHORT).show()
-            return 
-        }
         if (!binding.handwritingView.hasInk()) { 
-            Toast.makeText(context, "Write something first!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Draw something first!", Toast.LENGTH_SHORT).show()
             return 
         }
         
         val inks = binding.handwritingView.buildInkPerLine()
         val lines = ArrayList<String>()
         binding.btnRecognize.isEnabled = false
-        binding.btnRecognize.text = "Recognizing..."
-        binding.tvStatus.text = "Processing..."
+        binding.btnRecognize.text = "Processing..."
+        
         recognizeLine(rec, inks, 0, lines)
     }
 
@@ -178,8 +207,6 @@ class HandwritingFragment : Fragment() {
         }.addOnFailureListener { 
             _binding?.btnRecognize?.isEnabled = true
             _binding?.btnRecognize?.text = "Recognize Pen"
-            updateUiForMode()
-            Toast.makeText(context, "Recognition failed. Try writing larger.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -187,27 +214,25 @@ class HandwritingFragment : Fragment() {
         val text = lines.filter { it.isNotBlank() }.joinToString("\n")
         _binding?.btnRecognize?.isEnabled = true
         _binding?.btnRecognize?.text = "Recognize Pen"
-        updateUiForMode()
         
         if (text.isNotBlank()) {
             val currentText = binding.etHandwrittenCode.text.toString()
             val separator = if (currentText.isEmpty() || currentText.endsWith("\n")) "" else "\n"
-            binding.etHandwrittenCode.append(separator + text + "\n")
-            viewModel.appendCode(text)
+            val newText = currentText + separator + text + "\n"
+            
+            isUpdatingFromViewModel = true
+            binding.etHandwrittenCode.setText(newText)
+            isUpdatingFromViewModel = false
+            
+            viewModel.setCode(newText)
             binding.handwritingView.clear()
             
-            // Switch to text mode automatically so they can see it
-            if (isPenMode) { isPenMode = false; updateUiForMode() }
-            Toast.makeText(context, "Recognized: $text", Toast.LENGTH_SHORT).show()
+            // Auto-switch to keyboard mode to see the result
+            if (isPenMode) togglePenAndKeyboard()
+            Toast.makeText(context, "Recognized!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(context, "Could not read that. Try again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Could not read. Try again.", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putBoolean("isPenMode", isPenMode)
-        outState.putBoolean("isScrollMode", isScrollMode)
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
