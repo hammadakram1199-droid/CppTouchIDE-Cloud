@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -20,26 +21,46 @@ class HandwritingView @JvmOverloads constructor(
     private class StrokeData { val path = Path(); val points = ArrayList<InkPoint>() }
     
     private val dp = resources.displayMetrics.density
-    private val lineSpacing = 60f * dp 
-    private val gutterWidth = 60f * dp 
+    private val lineSpacing = 42f * dp // 30% less than 60dp
+    private val gutterWidth = 42f * dp // Less space for numbers
     
     private val strokes = ArrayList<StrokeData>()
     private var current: StrokeData? = null
     private var lastX = 0f
     private var lastY = 0f
 
-    private val linePaint = Paint().apply { color = Color.parseColor("#444444"); strokeWidth = 2f * dp; style = Paint.Style.STROKE }
+    // Default C++ code to draw on the canvas
+    private val defaultCode = listOf(
+        "#include <iostream>",
+        "using namespace std;",
+        "",
+        "int main() {",
+        "    cout << \"Hello, World!\" << endl;",
+        "    return 0;",
+        "}"
+    )
+
+    private val linePaint = Paint().apply { color = Color.parseColor("#444444"); strokeWidth = 1.5f * dp; style = Paint.Style.STROKE }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#1A1A1A") }
     
+    // Smaller line numbers
     private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#00FF88") 
         textAlign = Paint.Align.CENTER
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11f, resources.displayMetrics)
     }
     
+    // Small pen tip for precise code writing
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FFFFFF"); style = Paint.Style.STROKE
-        strokeWidth = 4f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+        strokeWidth = 2f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+    }
+
+    // Paint to draw the default code on the canvas
+    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#888888") // Light gray
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14f, resources.displayMetrics)
+        typeface = Typeface.MONOSPACE
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -47,14 +68,20 @@ class HandwritingView @JvmOverloads constructor(
         canvas.drawColor(Color.parseColor("#1E1E1E"))
         canvas.drawRect(0f, 0f, gutterWidth, height.toFloat(), gutterPaint)
         
-        // Draw lines and numbers based on actual screen height
         val lineCount = ceil(height / lineSpacing).toInt()
         for (i in 1..lineCount) {
             val y = i * lineSpacing
             canvas.drawLine(gutterWidth, y, width.toFloat(), y, linePaint)
             
+            // Number centered in the row
             val centerY = y - (lineSpacing / 2f) + (numberPaint.textSize / 3f)
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
+            
+            // Draw the default code on the first few lines
+            if (i <= defaultCode.size) {
+                val textY = y - 10f * dp // Adjust to sit on the line
+                canvas.drawText(defaultCode[i - 1], gutterWidth + 10f * dp, textY, textPaint)
+            }
         }
         
         for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
@@ -63,12 +90,14 @@ class HandwritingView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // No ScrollView to fight with anymore!
+                // CRITICAL FIX: Stops ScrollView from stealing the pen stroke!
+                parent?.requestDisallowInterceptTouchEvent(true) 
                 startStroke(event.x, event.y, event.eventTime)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 val stroke = current ?: return false
+                parent?.requestDisallowInterceptTouchEvent(true)
                 for (i in 0 until event.historySize) {
                     extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i), event.getHistoricalEventTime(i))
                 }
@@ -83,6 +112,7 @@ class HandwritingView @JvmOverloads constructor(
                 }
                 stroke.path.lineTo(lastX, lastY)
                 current = null
+                parent?.requestDisallowInterceptTouchEvent(false)
                 invalidate()
                 return true
             }

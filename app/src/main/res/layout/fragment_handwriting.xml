@@ -4,7 +4,6 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/editor_bg" android:orientation="vertical">
 
-    <!-- Top Bar: Toggle Mode -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
@@ -20,16 +19,20 @@
             android:text="Switch to Text" android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Container for Canvas and Text Editor (NO SCROLLVIEW) -->
     <FrameLayout
         android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
 
-        <!-- Pen Mode: Fills screen exactly -->
-        <com.example.cppidepro.HandwritingView
-            android:id="@+id/handwritingView" android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        <!-- SCROLLVIEW IS BACK! 4000dp tall so you can write a LOT of code -->
+        <ScrollView
+            android:id="@+id/handwritingScroll" android:layout_width="match_parent"
+            android:layout_height="match_parent" android:fillViewport="true"
+            android:overScrollMode="never" android:scrollbars="vertical">
+            
+            <com.example.cppidepro.HandwritingView
+                android:id="@+id/handwritingView" android:layout_width="match_parent"
+                android:layout_height="4000dp" />
+        </ScrollView>
 
-        <!-- Text Mode: Normal Code Editor -->
         <EditText
             android:id="@+id/etHandwrittenCode"
             android:layout_width="match_parent" android:layout_height="match_parent"
@@ -38,7 +41,6 @@
             android:inputType="textMultiLine|textNoSuggestions" android:visibility="gone" />
     </FrameLayout>
 
-    <!-- Bottom Bar -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
