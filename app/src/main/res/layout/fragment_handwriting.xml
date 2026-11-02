@@ -8,33 +8,10 @@
         android:id="@+id/tvStatus" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:background="@color/panel_bg"
         android:paddingStart="12dp" android:paddingTop="6dp" android:paddingEnd="12dp"
-        android:paddingBottom="6dp" android:text="@string/handwriting_hint"
+        android:paddingBottom="6dp" android:text="Write code here with your pen. It will convert to text and go to the Code tab."
         android:textColor="@color/gutter_text" android:textSize="12sp" />
 
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
-        
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRecognize" style="@style/Widget.CppIde.ActionButton"
-            android:layout_width="0dp" android:layout_height="48dp"
-            android:layout_weight="1" android:text="Recognize"
-            android:textColor="@color/black" app:backgroundTint="@color/accent" />
-            
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRunHandwriting" style="@style/Widget.CppIde.ActionButton"
-            android:layout_width="0dp" android:layout_height="48dp"
-            android:layout_marginStart="4dp" android:layout_weight="1" 
-            android:text="Run Code" android:textColor="@color/black" 
-            app:backgroundTint="#00FF88" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClear" style="@style/Widget.CppIde.OutlinedButton"
-            android:layout_width="wrap_content" android:layout_height="48dp"
-            android:layout_marginStart="4dp" android:text="@string/clear" />
-    </LinearLayout>
-
-    <!-- Top Half: Drawing Canvas -->
+    <!-- The full screen notebook -->
     <ScrollView
         android:id="@+id/handwritingScroll" android:layout_width="match_parent"
         android:layout_height="0dp" android:layout_weight="1"
@@ -44,20 +21,20 @@
             android:layout_height="4000dp" />
     </ScrollView>
 
-    <!-- Bottom Half: Normal Code Editor -->
-    <EditText
-        android:id="@+id/etHandwrittenCode"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#111111"
-        android:fontFamily="monospace"
-        android:gravity="top|start"
-        android:hint="Recognized code will appear here...\nYou can also type normal code here."
-        android:inputType="textMultiLine|textNoSuggestions"
-        android:padding="12dp"
-        android:textColor="@color/editor_text"
-        android:textColorHint="@color/gutter_text"
-        android:textSize="14sp" />
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
+        
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRecognize" style="@style/Widget.CppIde.ActionButton"
+            android:layout_width="0dp" android:layout_height="48dp"
+            android:layout_weight="1" android:text="Recognize & Send to Code"
+            android:textColor="@color/black" app:backgroundTint="@color/accent" />
+            
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear" style="@style/Widget.CppIde.OutlinedButton"
+            android:layout_width="wrap_content" android:layout_height="48dp"
+            android:layout_marginStart="8dp" android:text="@string/clear" />
+    </LinearLayout>
 
 </LinearLayout>
