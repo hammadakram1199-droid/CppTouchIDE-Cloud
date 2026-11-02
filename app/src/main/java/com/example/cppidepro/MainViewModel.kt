@@ -15,15 +15,12 @@ class MainViewModel : ViewModel() {
     val navigateTo: LiveData<Int?> = _navigateTo
 
     fun setCode(newCode: String) { if (_code.value != newCode) _code.value = newCode }
-    
-    // Appends code to the end of the existing code
     fun appendCode(text: String) {
         if (text.isBlank()) return
         val current = _code.value.orEmpty()
         val separator = if (current.isEmpty() || current.endsWith("\n")) "" else "\n"
         _code.value = current + separator + text + "\n"
     }
-    
     fun setOutput(text: String) { _output.value = text }
     fun setRunning(running: Boolean) { _isRunning.value = running }
     fun postOutput(text: String) = _output.postValue(text)
@@ -37,14 +34,7 @@ class MainViewModel : ViewModel() {
         const val TAB_OUTPUT = 2
         const val DEFAULT_OUTPUT = "// Press \"Run Code\" to compile and run your program."
 
-        val DEFAULT_CODE = """
-            #include <iostream>
-            using namespace std;
-
-            int main() {
-                cout << "Hello, World!" << endl;
-                return 0;
-            }
-        """.trimIndent() + "\n"
+        // Removed default code so it starts exactly at line 1
+        val DEFAULT_CODE = ""
     }
 }

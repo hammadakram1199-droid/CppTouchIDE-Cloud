@@ -4,7 +4,7 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/editor_bg">
 
-    <!-- Smaller, Sleeker Icon Toolbar -->
+    <!-- Toolbar with Save -->
     <HorizontalScrollView
         android:id="@+id/toolbarScroll"
         android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -30,6 +30,12 @@
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_rotate"
                 android:scaleType="centerInside" app:tint="@color/editor_text" />
 
+            <!-- NEW SAVE BUTTON -->
+            <ImageButton
+                android:id="@+id/btnSaveProject" android:layout_width="40dp" android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_save"
+                android:scaleType="centerInside" app:tint="#00FF88" />
+
             <ImageButton
                 android:id="@+id/btnClear" android:layout_width="40dp" android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_delete"
@@ -37,18 +43,15 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- Main Container -->
     <FrameLayout
         android:layout_width="match_parent" android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbarScroll"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Pure Drawing Canvas -->
         <com.example.cppidepro.HandwritingView
             android:id="@+id/handwritingView" android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Floating Scroll Up/Down Buttons -->
         <LinearLayout
             android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_gravity="end|bottom" android:layout_margin="16dp" android:orientation="vertical">
@@ -64,7 +67,6 @@
                 app:backgroundTint="#333333" android:textColor="#FFFFFF"/>
         </LinearLayout>
 
-        <!-- Floating Recognize Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRecognize" android:layout_width="wrap_content" android:layout_height="48dp"
             android:layout_gravity="bottom|center_horizontal" android:layout_marginBottom="16dp"

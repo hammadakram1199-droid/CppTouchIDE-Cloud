@@ -1,13 +1,16 @@
 package com.example.cppidepro
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.example.cppidepro.databinding.FragmentHandwritingBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.vision.digitalink.DigitalInkRecognition
@@ -32,12 +35,11 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // Toggle Scroll Mode (Free swipe)
         binding.btnToggleMode.setOnClickListener {
             binding.handwritingView.isScrollMode = !binding.handwritingView.isScrollMode
             if (binding.handwritingView.isScrollMode) {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_sort_by_size)
-                Toast.makeText(context, "Scroll Mode (Swipe to move)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Scroll Mode", Toast.LENGTH_SHORT).show()
             } else {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_edit)
                 Toast.makeText(context, "Draw Mode", Toast.LENGTH_SHORT).show()
@@ -48,12 +50,33 @@ class HandwritingFragment : Fragment() {
         binding.btnRedo.setOnClickListener { binding.handwritingView.redo() }
         binding.btnClear.setOnClickListener { binding.handwritingView.clear() }
 
+        // NEW SAVE PROJECT LOGIC
+        binding.btnSaveProject.setOnClickListener {
+            showSaveDialog()
+        }
+
         binding.btnScrollDown.setOnClickListener { binding.handwritingView.scrollByLines(12) }
         binding.btnScrollUp.setOnClickListener { binding.handwritingView.scrollByLines(-12) }
 
         binding.btnRecognize.setOnClickListener { recognizeInk() }
 
         setupRecognizer()
+    }
+
+    private fun showSaveDialog() {
+        val input = EditText(requireContext()).apply { hint = "Project Name" }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Save Project")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val name = input.text.toString()
+                if (name.isNotBlank()) {
+                    val code = viewModel.code.value.orEmpty()
+                    val prefs = requireContext().getSharedPreferences("projects", Context.MODE_PRIVATE)
+                    prefs.edit().putString(name, code).apply()
+                    Toast.makeText(context, "Saved as $name", Toast.LENGTH_SHORT).show()
+                }
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun setupRecognizer() {
@@ -115,14 +138,15 @@ class HandwritingFragment : Fragment() {
         _binding?.btnRecognize?.text = "Recognize Code"
         
         if (text.isNotBlank()) {
-            // Append to ViewModel
-            viewModel.appendCode(text)
-            // Clear Canvas
-            binding.handwritingView.clear()
+            // SET THE CODE (Not append, so it starts at line 1)
+            viewModel.setCode(text)
             
-            // Automatically jump to Code Tab
+            // DO NOT CLEAR THE CANVAS (Handwriting stays)
+            // binding.handwritingView.clear()
+            
+            // Auto-navigate to Code tab
             viewModel.navigateTo(MainViewModel.TAB_CODE)
-            Toast.makeText(context, "Successfully recognized!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Recognized and mapped to line 1!", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Could not read. Try again.", Toast.LENGTH_SHORT).show()
         }
