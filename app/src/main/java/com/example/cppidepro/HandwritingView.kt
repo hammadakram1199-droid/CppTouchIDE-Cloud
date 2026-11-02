@@ -14,6 +14,7 @@ import android.view.View
 import com.google.mlkit.vision.digitalink.Ink
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.sqrt
 
 class HandwritingView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -48,6 +49,7 @@ class HandwritingView @JvmOverloads constructor(
     }
     
     var isScrollMode = false 
+    var isEraseMode = false // NEW ERASER MODE
 
     private val dp = resources.displayMetrics.density
     val lineSpacing = 42f * dp 
@@ -121,6 +123,28 @@ class HandwritingView @JvmOverloads constructor(
                 }
             }
             return false
+        } else if (isEraseMode) {
+            // ERASER LOGIC
+            if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
+                val touchX = event.x
+                val touchY = event.y + scrollOffsetY
+                val eraseRadius = 40f * dp
+                val iterator = strokes.iterator()
+                while (iterator.hasNext()) {
+                    val stroke = iterator.next()
+                    for (point in stroke.points) {
+                        val dx = point.x - touchX
+                        val dy = point.y - touchY
+                        if (sqrt(dx * dx + dy * dy) < eraseRadius) {
+                            iterator.remove()
+                            invalidate()
+                            break
+                        }
+                    }
+                }
+                return true
+            }
+            return false
         } else {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -165,7 +189,7 @@ class HandwritingView @JvmOverloads constructor(
         stroke.path.moveTo(x, y)
         stroke.points.add(InkPoint(x, y, time))
         strokes.add(stroke)
-        undoStack.clear() // Clear redo stack on new action
+        undoStack.clear() 
         current = stroke
         lastX = x
         lastY = y

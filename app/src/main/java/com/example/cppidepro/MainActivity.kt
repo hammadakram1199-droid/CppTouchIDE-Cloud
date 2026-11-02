@@ -19,6 +19,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.cppidepro.databinding.ActivityMainBinding
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -71,11 +72,32 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.inflateMenu(R.menu.main_menu)
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_load_project -> { showProjectsDialog(); true }
                 R.id.action_export_pdf -> { exportAsPdf(); true }
                 R.id.action_export_txt -> { exportAsTxt(); true }
                 else -> false
             }
         }
+    }
+
+    private fun showProjectsDialog() {
+        val prefs = getSharedPreferences("projects", Context.MODE_PRIVATE)
+        val projects = prefs.all.keys.toTypedArray()
+        
+        if (projects.isEmpty()) {
+            Toast.makeText(this, "No saved projects found.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle("My Projects")
+            .setItems(projects) { _, which ->
+                val name = projects[which]
+                val code = prefs.getString(name, "")
+                viewModel.setCode(code ?: "")
+                binding.pager.setCurrentItem(MainViewModel.TAB_CODE, false)
+                Toast.makeText(this, "Loaded $name!", Toast.LENGTH_SHORT).show()
+            }.show()
     }
 
     private fun exportAsPdf() {
@@ -84,19 +106,15 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "No code to export!", Toast.LENGTH_SHORT).show()
             return
         }
-        
         val webView = WebView(this)
         val html = "<html><body style='background-color:#1E1E1E; color:#D4D4D4; font-family:monospace; padding:20px;'><pre>$code</pre></body></html>"
         webView.loadDataWithBaseURL(null, html, "text/HTML", "UTF-8", null)
-        
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // FIX: Use ?.let to safely access the view
                 view?.let {
                     val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
-                    val jobName = "CppIdeProject"
-                    printManager.print(jobName, it.createPrintDocumentAdapter(jobName), PrintAttributes.Builder().build())
+                    printManager.print("CppIdeProject", it.createPrintDocumentAdapter("CppIdeProject"), PrintAttributes.Builder().build())
                 }
             }
         }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/action_load_project" android:title="My Projects" android:icon="@android:drawable/ic_menu_agenda" app:showAsAction="always" />
     <item android:id="@+id/action_export_pdf" android:title="Save as PDF" app:showAsAction="never" />
     <item android:id="@+id/action_export_txt" android:title="Export Code (.txt)" app:showAsAction="never" />
 </menu>

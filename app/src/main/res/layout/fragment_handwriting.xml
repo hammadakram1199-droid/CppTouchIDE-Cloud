@@ -4,7 +4,6 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/editor_bg">
 
-    <!-- Toolbar with Save -->
     <HorizontalScrollView
         android:id="@+id/toolbarScroll"
         android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -20,6 +19,12 @@
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_edit"
                 android:scaleType="centerInside" app:tint="@color/accent" />
 
+            <!-- NEW ERASER BUTTON -->
+            <ImageButton
+                android:id="@+id/btnEraser" android:layout_width="40dp" android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_clear_playlist"
+                android:scaleType="centerInside" app:tint="@color/editor_text" />
+
             <ImageButton
                 android:id="@+id/btnUndo" android:layout_width="40dp" android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_revert"
@@ -30,7 +35,6 @@
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_rotate"
                 android:scaleType="centerInside" app:tint="@color/editor_text" />
 
-            <!-- NEW SAVE BUTTON -->
             <ImageButton
                 android:id="@+id/btnSaveProject" android:layout_width="40dp" android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_save"

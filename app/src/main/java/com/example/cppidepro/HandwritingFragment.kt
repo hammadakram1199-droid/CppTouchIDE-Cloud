@@ -25,7 +25,6 @@ class HandwritingFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by activityViewModels()
     private var recognizer: DigitalInkRecognizer? = null
-    private var modelReady = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -39,6 +38,7 @@ class HandwritingFragment : Fragment() {
             binding.handwritingView.isScrollMode = !binding.handwritingView.isScrollMode
             if (binding.handwritingView.isScrollMode) {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_sort_by_size)
+                binding.handwritingView.isEraseMode = false // Turn off eraser
                 Toast.makeText(context, "Scroll Mode", Toast.LENGTH_SHORT).show()
             } else {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_edit)
@@ -46,20 +46,29 @@ class HandwritingFragment : Fragment() {
             }
         }
 
+        // ERASER TOGGLE
+        binding.btnEraser.setOnClickListener {
+            binding.handwritingView.isEraseMode = !binding.handwritingView.isEraseMode
+            if (binding.handwritingView.isEraseMode) {
+                binding.btnEraser.setBackgroundColor(android.graphics.Color.parseColor("#FF5252"))
+                Toast.makeText(context, "Eraser ON", Toast.LENGTH_SHORT).show()
+            } else {
+                binding.btnEraser.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                Toast.makeText(context, "Eraser OFF", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.btnUndo.setOnClickListener { binding.handwritingView.undo() }
         binding.btnRedo.setOnClickListener { binding.handwritingView.redo() }
         binding.btnClear.setOnClickListener { binding.handwritingView.clear() }
-
-        // NEW SAVE PROJECT LOGIC
-        binding.btnSaveProject.setOnClickListener {
-            showSaveDialog()
-        }
+        binding.btnSaveProject.setOnClickListener { showSaveDialog() }
 
         binding.btnScrollDown.setOnClickListener { binding.handwritingView.scrollByLines(12) }
         binding.btnScrollUp.setOnClickListener { binding.handwritingView.scrollByLines(-12) }
 
         binding.btnRecognize.setOnClickListener { recognizeInk() }
 
+        // Pre-download the ML Kit model in the background
         setupRecognizer()
     }
 
@@ -87,12 +96,10 @@ class HandwritingFragment : Fragment() {
             
             val manager = RemoteModelManager.getInstance()
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
-                if (downloaded) { modelReady = true; binding.btnRecognize.isEnabled = true }
-                else {
+                if (!downloaded) {
                     binding.btnRecognize.text = "Downloading..."
                     binding.btnRecognize.isEnabled = false
                     manager.download(model, DownloadConditions.Builder().build()).addOnSuccessListener { 
-                        modelReady = true
                         binding.btnRecognize.isEnabled = true
                         binding.btnRecognize.text = "Recognize Code"
                     }
@@ -138,15 +145,9 @@ class HandwritingFragment : Fragment() {
         _binding?.btnRecognize?.text = "Recognize Code"
         
         if (text.isNotBlank()) {
-            // SET THE CODE (Not append, so it starts at line 1)
             viewModel.setCode(text)
-            
-            // DO NOT CLEAR THE CANVAS (Handwriting stays)
-            // binding.handwritingView.clear()
-            
-            // Auto-navigate to Code tab
             viewModel.navigateTo(MainViewModel.TAB_CODE)
-            Toast.makeText(context, "Recognized and mapped to line 1!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Recognized!", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(context, "Could not read. Try again.", Toast.LENGTH_SHORT).show()
         }
