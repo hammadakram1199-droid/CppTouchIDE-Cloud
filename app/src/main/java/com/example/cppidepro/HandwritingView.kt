@@ -52,14 +52,14 @@ class HandwritingView @JvmOverloads constructor(
     private val dp = resources.displayMetrics.density
     val lineSpacing = 42f * dp 
     private val gutterWidth = 42f * dp 
-    private val totalContentHeight = 20000f // 20000dp tall canvas
+    private val totalContentHeight = 20000f 
     
     private val strokes = ArrayList<StrokeData>()
+    private val undoStack = ArrayList<StrokeData>()
     private var current: StrokeData? = null
     private var lastX = 0f
     private var lastY = 0f
     
-    // Scroll variables
     private var scrollOffsetY = 0f
     private var lastTouchY = 0f
 
@@ -74,7 +74,7 @@ class HandwritingView @JvmOverloads constructor(
     
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FFFFFF"); style = Paint.Style.STROKE
-        strokeWidth = 2f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+        strokeWidth = 3f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
     }
 
     private val scrollBarPaint = Paint().apply { color = Color.parseColor("#666666") }
@@ -82,8 +82,6 @@ class HandwritingView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#1E1E1E"))
-        
-        // Draw everything with the scroll offset applied
         canvas.save()
         canvas.translate(0f, -scrollOffsetY)
         
@@ -102,7 +100,6 @@ class HandwritingView @JvmOverloads constructor(
         for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
         canvas.restore()
 
-        // Draw Scrollbar on the right
         val scrollBarWidth = 8f * dp
         val scrollBarX = width - scrollBarWidth
         val thumbHeight = (height / totalContentHeight) * height
@@ -116,20 +113,15 @@ class HandwritingView @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (isScrollMode) {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastTouchY = event.y
-                    return true
-                }
+                MotionEvent.ACTION_DOWN -> { lastTouchY = event.y; return true }
                 MotionEvent.ACTION_MOVE -> {
-                    val dy = lastTouchY - event.y
-                    updateScroll(scrollOffsetY + dy)
+                    updateScroll(scrollOffsetY + (lastTouchY - event.y))
                     lastTouchY = event.y
                     return true
                 }
             }
             return false
         } else {
-            // DRAW MODE
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
@@ -173,6 +165,7 @@ class HandwritingView @JvmOverloads constructor(
         stroke.path.moveTo(x, y)
         stroke.points.add(InkPoint(x, y, time))
         strokes.add(stroke)
+        undoStack.clear() // Clear redo stack on new action
         current = stroke
         lastX = x
         lastY = y
@@ -186,8 +179,24 @@ class HandwritingView @JvmOverloads constructor(
         lastY = y
     }
 
+    fun undo() {
+        if (strokes.isNotEmpty()) {
+            val last = strokes.removeAt(strokes.size - 1)
+            undoStack.add(last)
+            invalidate()
+        }
+    }
+
+    fun redo() {
+        if (undoStack.isNotEmpty()) {
+            val last = undoStack.removeAt(undoStack.size - 1)
+            strokes.add(last)
+            invalidate()
+        }
+    }
+
     fun hasInk(): Boolean = strokes.isNotEmpty()
-    fun clear() { strokes.clear(); current = null; invalidate() }
+    fun clear() { strokes.clear(); undoStack.clear(); current = null; invalidate() }
 
     fun buildInkPerLine(): List<Ink> {
         val byLine = sortedMapOf<Int, MutableList<StrokeData>>()

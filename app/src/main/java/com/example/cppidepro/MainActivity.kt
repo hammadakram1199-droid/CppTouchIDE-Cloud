@@ -1,19 +1,24 @@
 package com.example.cppidepro
 
+import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.view.inputmethod.InputMethodManager
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
-import androidx.activity.viewModels
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.cppidepro.databinding.ActivityMainBinding
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -27,6 +32,7 @@ class MainActivity : AppCompatActivity() {
         setupPager()
         setupTabs()
         setupMenu()
+        
         viewModel.navigateTo.observe(this) { index ->
             if (index != null) { binding.pager.setCurrentItem(index, false); viewModel.onNavigationHandled() }
         }
@@ -35,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupPager() {
         binding.pager.adapter = PagerAdapter(this)
         binding.pager.isUserInputEnabled = false
-        binding.pager.offscreenPageLimit = 2
+        binding.pager.offscreenPageLimit = 2 // Keeps handwriting drawings alive
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) { highlightTab(position); hideKeyboard() }
         })
@@ -65,28 +71,41 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.inflateMenu(R.menu.main_menu)
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_save -> { saveProject(); true }
-                R.id.action_load -> { confirmLoadProject(); true }
+                R.id.action_export_pdf -> { exportAsPdf(); true }
+                R.id.action_export_txt -> { exportAsTxt(); true }
                 else -> false
             }
         }
     }
 
-    private fun saveProject() {
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(KEY_PROJECT, viewModel.code.value.orEmpty()).apply()
-        Toast.makeText(this, "Project saved", Toast.LENGTH_SHORT).show()
+    private fun exportAsPdf() {
+        val code = viewModel.code.value.orEmpty()
+        if (code.isBlank()) {
+            Toast.makeText(this, "No code to export!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val webView = WebView(this)
+        val html = "<html><body style='background-color:#1E1E1E; color:#D4D4D4; font-family:monospace; padding:20px;'><pre>$code</pre></body></html>"
+        webView.loadDataWithBaseURL(null, html, "text/HTML", "UTF-8", null)
+        
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?) {
+                val printManager = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                val jobName = "CppIdeProject"
+                printManager.print(jobName, view.createPrintDocumentAdapter(jobName), PrintAttributes.Builder().build())
+            }
+        }
     }
 
-    private fun confirmLoadProject() {
-        val saved = getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_PROJECT, null)
-        if (saved == null) { Toast.makeText(this, "No saved project found", Toast.LENGTH_SHORT).show(); return }
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.menu_load).setMessage("Replace the current code with the saved project?")
-            .setPositiveButton("Load") { _, _ ->
-                viewModel.setCode(saved)
-                binding.pager.setCurrentItem(MainViewModel.TAB_CODE, false)
-                Toast.makeText(this, "Project loaded", Toast.LENGTH_SHORT).show()
-            }.setNegativeButton("Cancel", null).show()
+    private fun exportAsTxt() {
+        val code = viewModel.code.value.orEmpty()
+        val sendIntent: Intent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, code)
+            type = "text/plain"
+        }
+        startActivity(Intent.createChooser(sendIntent, "Export Code"))
     }
 
     private fun hideKeyboard() {
@@ -102,10 +121,5 @@ class MainActivity : AppCompatActivity() {
             MainViewModel.TAB_CODE -> CodeFragment()
             else -> OutputFragment()
         }
-    }
-
-    companion object {
-        private const val PREFS = "cpp_ide_prefs"
-        private const val KEY_PROJECT = "saved_project"
     }
 }
