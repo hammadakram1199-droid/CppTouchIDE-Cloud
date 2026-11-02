@@ -33,7 +33,6 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // Set the default C++ code in the Text Editor
         binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
 
         binding.btnClear.setOnClickListener { 
@@ -46,13 +45,13 @@ class HandwritingFragment : Fragment() {
         binding.btnToggleMode.setOnClickListener {
             isPenMode = !isPenMode
             if (isPenMode) {
-                binding.handwritingScroll.visibility = View.VISIBLE
+                binding.handwritingView.visibility = View.VISIBLE
                 binding.etHandwrittenCode.visibility = View.GONE
                 binding.btnToggleMode.text = "Switch to Text"
                 binding.tvStatus.text = "Mode: Pen (Draw Code)"
                 binding.btnRecognize.visibility = View.VISIBLE
             } else {
-                binding.handwritingScroll.visibility = View.GONE
+                binding.handwritingView.visibility = View.GONE
                 binding.etHandwrittenCode.visibility = View.VISIBLE
                 binding.btnToggleMode.text = "Switch to Pen"
                 binding.tvStatus.text = "Mode: Text (Type Code)"
@@ -65,33 +64,44 @@ class HandwritingFragment : Fragment() {
 
     private fun setupRecognizer() {
         try {
-            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
+            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US")
+            if (identifier == null) {
+                binding.tvStatus.text = "Language not supported."
+                return
+            }
             val model = DigitalInkRecognitionModel.builder(identifier).build()
             recognizer = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
             
             val manager = RemoteModelManager.getInstance()
+            binding.tvStatus.text = "Checking model..."
+            
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
                 if (downloaded) { 
                     modelReady = true
-                    binding.tvStatus.text = "Ready to draw."
+                    binding.tvStatus.text = "Pen Ready. Draw your code."
                 } else {
-                    binding.tvStatus.text = "Downloading model (needs internet)..."
+                    binding.tvStatus.text = "Downloading model... Please wait."
                     manager.download(model, DownloadConditions.Builder().build())
                         .addOnSuccessListener { 
                             modelReady = true
-                            binding.tvStatus.text = "Ready to draw."
+                            binding.tvStatus.text = "Pen Ready. Draw your code."
+                        }
+                        .addOnFailureListener { e ->
+                            binding.tvStatus.text = "Model download failed. Check internet."
                         }
                 }
+            }.addOnFailureListener {
+                binding.tvStatus.text = "Could not check model."
             }
         } catch (t: Throwable) {
-            binding.tvStatus.text = "Handwriting unavailable."
+            binding.tvStatus.text = "Handwriting requires Google Play Services."
         }
     }
 
     private fun recognizeInk() {
         val rec = recognizer
         if (rec == null) { showToast("Recognizer not ready."); return }
-        if (!binding.handwritingView.hasInk()) { showToast("Write something first!"); return }
+        if (!binding.handwritingView.hasInk()) { showToast("Draw something first!"); return }
         if (!modelReady) { showToast("Model is downloading. Please wait."); return }
         
         val inks = binding.handwritingView.buildInkPerLine()
@@ -118,21 +128,19 @@ class HandwritingFragment : Fragment() {
     private fun finishRecognition(lines: List<String>) {
         val text = lines.filter { it.isNotBlank() }.joinToString("\n")
         _binding?.btnRecognize?.isEnabled = true
-        _binding?.tvStatus?.text = "Ready to draw."
+        _binding?.tvStatus?.text = "Pen Ready."
         
         if (text.isNotBlank()) {
-            // Append to the text editor
             val currentText = binding.etHandwrittenCode.text.toString()
             val separator = if (currentText.isEmpty() || currentText.endsWith("\n")) "" else "\n"
             binding.etHandwrittenCode.append(separator + text + "\n")
             
-            // Also update the global ViewModel so it goes to the Code tab
             viewModel.appendCode(text)
             binding.handwritingView.clear()
             
-            // Switch to text mode so user can see the result immediately
-            binding.btnToggleMode.performClick()
-            showToast("Recognized and added to text!")
+            // Auto-switch to text mode to see the result
+            if (isPenMode) binding.btnToggleMode.performClick()
+            showToast("Recognized!")
         } else {
             showToast("Could not recognize. Write clearer.")
         }

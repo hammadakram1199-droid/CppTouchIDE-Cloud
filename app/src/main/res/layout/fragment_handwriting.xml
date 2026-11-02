@@ -12,7 +12,7 @@
         <TextView
             android:id="@+id/tvStatus" android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:layout_gravity="center_vertical"
-            android:text="Mode: Pen (Draw Code)" android:textColor="@color/editor_text" android:textSize="14sp" />
+            android:text="Mode: Pen" android:textColor="@color/editor_text" android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnToggleMode" style="@style/Widget.CppIde.OutlinedButton"
@@ -20,20 +20,16 @@
             android:text="Switch to Text" android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Container for Canvas and Text Editor -->
+    <!-- Container for Canvas and Text Editor (NO SCROLLVIEW) -->
     <FrameLayout
         android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
 
-        <!-- Pen Mode: Massive Canvas with Lines and Numbers -->
-        <ScrollView
-            android:id="@+id/handwritingScroll" android:layout_width="match_parent"
-            android:layout_height="match_parent" android:overScrollMode="never" android:scrollbars="vertical">
-            <com.example.cppidepro.HandwritingView
-                android:id="@+id/handwritingView" android:layout_width="match_parent"
-                android:layout_height="4000dp" />
-        </ScrollView>
+        <!-- Pen Mode: Fills screen exactly -->
+        <com.example.cppidepro.HandwritingView
+            android:id="@+id/handwritingView" android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-        <!-- Text Mode: Normal Code Editor with Default Code -->
+        <!-- Text Mode: Normal Code Editor -->
         <EditText
             android:id="@+id/etHandwrittenCode"
             android:layout_width="match_parent" android:layout_height="match_parent"
@@ -42,7 +38,7 @@
             android:inputType="textMultiLine|textNoSuggestions" android:visibility="gone" />
     </FrameLayout>
 
-    <!-- Bottom Bar: Actions -->
+    <!-- Bottom Bar -->
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
