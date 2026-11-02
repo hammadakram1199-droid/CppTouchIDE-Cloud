@@ -20,21 +20,21 @@ class HandwritingView @JvmOverloads constructor(
     
     var fingerDrawingEnabled: Boolean = true
     private val dp = resources.displayMetrics.density
-    private val lineSpacing = 50f * dp // Slightly taller for easier writing
-    private val gutterWidth = 60f * dp // Wider gutter for line numbers
+    private val lineSpacing = 55f * dp // TALLER lines
+    private val gutterWidth = 60f * dp 
     
     private val strokes = ArrayList<StrokeData>()
     private var current: StrokeData? = null
     private var lastX = 0f
     private var lastY = 0f
 
-    private val linePaint = Paint().apply { color = Color.parseColor("#3C3C3C"); strokeWidth = 1f * dp; style = Paint.Style.STROKE }
-    private val dividerPaint = Paint().apply { color = Color.parseColor("#6A6A6A"); strokeWidth = 1.5f * dp }
+    private val linePaint = Paint().apply { color = Color.parseColor("#555555"); strokeWidth = 2f * dp; style = Paint.Style.STROKE }
+    private val dividerPaint = Paint().apply { color = Color.parseColor("#888888"); strokeWidth = 2f * dp }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#252526") }
     
-    // Made the line numbers larger and white for high visibility
+    // Bright green line numbers
     private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFFFFF") 
+        color = Color.parseColor("#00FF88") 
         textAlign = Paint.Align.CENTER
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 16f, resources.displayMetrics)
     }
@@ -52,10 +52,9 @@ class HandwritingView @JvmOverloads constructor(
         val lineCount = ceil(height / lineSpacing).toInt()
         for (i in 1..lineCount) {
             val y = i * lineSpacing
-            // Draw the horizontal line
             canvas.drawLine(gutterWidth, y, width.toFloat(), y, linePaint)
             
-            // Draw the line number (centered vertically between the lines)
+            // Center number in the middle of the row
             val centerY = y - (lineSpacing / 2f) + (numberPaint.textSize / 3f)
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
