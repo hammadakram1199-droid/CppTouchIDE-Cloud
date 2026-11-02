@@ -23,8 +23,19 @@ class HandwritingFragment : Fragment() {
     private val viewModel: MainViewModel by activityViewModels()
     private var recognizer: DigitalInkRecognizer? = null
     private var modelReady = false
+    
+    // Persist these across rotation
     private var isPenMode = true
     private var isScrollMode = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Restore mode state on rotation
+        if (savedInstanceState != null) {
+            isPenMode = savedInstanceState.getBoolean("isPenMode", true)
+            isScrollMode = savedInstanceState.getBoolean("isScrollMode", false)
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -36,6 +47,31 @@ class HandwritingFragment : Fragment() {
         
         binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
 
+        // Restore UI based on saved mode
+        if (isPenMode) {
+            binding.handwritingScroll.visibility = View.VISIBLE
+            binding.etHandwrittenCode.visibility = View.GONE
+            binding.btnToggleMode.text = "Switch to Text"
+            binding.btnRecognize.visibility = View.VISIBLE
+        } else {
+            binding.handwritingScroll.visibility = View.GONE
+            binding.etHandwrittenCode.visibility = View.VISIBLE
+            binding.btnToggleMode.text = "Switch to Pen"
+            binding.btnRecognize.visibility = View.GONE
+        }
+        
+        binding.handwritingView.isScrollMode = isScrollMode
+        if (isScrollMode) {
+            binding.btnScrollMode.text = "Draw Mode"
+            binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#00FF88"))
+            binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
+        } else {
+            binding.btnScrollMode.text = "Scroll Mode"
+            binding.btnScrollMode.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FFA500"))
+            binding.btnScrollMode.setTextColor(android.graphics.Color.BLACK)
+        }
+        updateStatusText()
+
         binding.btnClear.setOnClickListener { 
             binding.handwritingView.clear()
             binding.etHandwrittenCode.setText(MainViewModel.DEFAULT_CODE)
@@ -43,7 +79,6 @@ class HandwritingFragment : Fragment() {
         
         binding.btnRecognize.setOnClickListener { recognizeInk() }
         
-        // Toggle between Pen and Text mode
         binding.btnToggleMode.setOnClickListener {
             isPenMode = !isPenMode
             if (isPenMode) {
@@ -57,12 +92,12 @@ class HandwritingFragment : Fragment() {
                 binding.etHandwrittenCode.visibility = View.VISIBLE
                 binding.btnToggleMode.text = "Switch to Pen"
                 binding.btnRecognize.visibility = View.GONE
+                binding.tvStatus.text = "Mode: Text Editor"
             }
         }
 
-        // Toggle between Draw and Scroll mode
         binding.btnScrollMode.setOnClickListener {
-            if (!isPenMode) return@setOnClickListener // Only works in Pen mode
+            if (!isPenMode) return@setOnClickListener
             
             isScrollMode = !isScrollMode
             binding.handwritingView.isScrollMode = isScrollMode
@@ -99,31 +134,19 @@ class HandwritingFragment : Fragment() {
             recognizer = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
             
             val manager = RemoteModelManager.getInstance()
-            binding.tvStatus.text = "Checking model..."
-            
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
-                if (downloaded) { 
-                    modelReady = true
-                    updateStatusText()
-                } else {
-                    binding.tvStatus.text = "Downloading model... Please wait."
-                    manager.download(model, DownloadConditions.Builder().build())
-                        .addOnSuccessListener { 
-                            modelReady = true
-                            updateStatusText()
-                        }
+                if (downloaded) { modelReady = true; updateStatusText() }
+                else {
+                    manager.download(model, DownloadConditions.Builder().build()).addOnSuccessListener { modelReady = true; updateStatusText() }
                 }
             }
-        } catch (t: Throwable) {
-            binding.tvStatus.text = "Handwriting unavailable."
-        }
+        } catch (t: Throwable) { binding.tvStatus.text = "Handwriting unavailable." }
     }
 
     private fun recognizeInk() {
-        val rec = recognizer
-        if (rec == null) { showToast("Recognizer not ready."); return }
-        if (!binding.handwritingView.hasInk()) { showToast("Write something first!"); return }
-        if (!modelReady) { showToast("Model is downloading. Please wait."); return }
+        val rec = recognizer ?: return
+        if (!binding.handwritingView.hasInk()) { Toast.makeText(context, "Write something first!", Toast.LENGTH_SHORT).show(); return }
+        if (!modelReady) { Toast.makeText(context, "Model downloading...", Toast.LENGTH_SHORT).show(); return }
         
         val inks = binding.handwritingView.buildInkPerLine()
         val lines = ArrayList<String>()
@@ -133,17 +156,11 @@ class HandwritingFragment : Fragment() {
     }
 
     private fun recognizeLine(rec: DigitalInkRecognizer, inks: List<Ink>, index: Int, out: MutableList<String>) {
-        if (index >= inks.size) { 
-            finishRecognition(out)
-            return 
-        }
+        if (index >= inks.size) { finishRecognition(out); return }
         rec.recognize(inks[index]).addOnSuccessListener { result ->
             out.add(result.candidates.firstOrNull()?.text.orEmpty())
             recognizeLine(rec, inks, index + 1, out)
-        }.addOnFailureListener { 
-            _binding?.btnRecognize?.isEnabled = true
-            updateStatusText()
-        }
+        }.addOnFailureListener { _binding?.btnRecognize?.isEnabled = true; updateStatusText() }
     }
 
     private fun finishRecognition(lines: List<String>) {
@@ -155,19 +172,18 @@ class HandwritingFragment : Fragment() {
             val currentText = binding.etHandwrittenCode.text.toString()
             val separator = if (currentText.isEmpty() || currentText.endsWith("\n")) "" else "\n"
             binding.etHandwrittenCode.append(separator + text + "\n")
-            
             viewModel.appendCode(text)
             binding.handwritingView.clear()
-            
             if (isPenMode) binding.btnToggleMode.performClick()
-            showToast("Recognized!")
-        } else {
-            showToast("Could not recognize. Write clearer.")
+            Toast.makeText(context, "Recognized!", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun showToast(msg: String) {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    // Save state when rotating
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("isPenMode", isPenMode)
+        outState.putBoolean("isScrollMode", isScrollMode)
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

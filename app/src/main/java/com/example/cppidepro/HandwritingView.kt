@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
@@ -16,10 +18,38 @@ class HandwritingView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     
-    private class InkPoint(val x: Float, val y: Float, val t: Long)
-    private class StrokeData { val path = Path(); val points = ArrayList<InkPoint>() }
+    // Make InkPoint Parcelable so we can save it during rotation
+    class InkPoint(val x: Float, val y: Float, val t: Long) : Parcelable {
+        constructor(parcel: Parcel) : this(parcel.readFloat(), parcel.readFloat(), parcel.readLong())
+        override fun writeToParcel(parcel: Parcel, flags: Int) {
+            parcel.writeFloat(x); parcel.writeFloat(y); parcel.writeLong(t)
+        }
+        override fun describeContents(): Int = 0
+        companion object CREATOR : Parcelable.Creator<InkPoint> {
+            override fun createFromParcel(parcel: Parcel): InkPoint = InkPoint(parcel)
+            override fun newArray(size: Int): Array<InkPoint?> = arrayOfNulls(size)
+        }
+    }
+
+    class StrokeData() : Parcelable {
+        val path = Path()
+        val points = ArrayList<InkPoint>()
+        constructor(parcel: Parcel) : this() {
+            parcel.readTypedList(points, InkPoint.CREATOR)
+            if (points.isNotEmpty()) {
+                path.moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) { path.lineTo(points[i].x, points[i].y) }
+            }
+        }
+        override fun writeToParcel(parcel: Parcel, flags: Int) { parcel.writeTypedList(points) }
+        override fun describeContents(): Int = 0
+        companion object CREATOR : Parcelable.Creator<StrokeData> {
+            override fun createFromParcel(parcel: Parcel): StrokeData = StrokeData(parcel)
+            override fun newArray(size: Int): Array<StrokeData?> = arrayOfNulls(size)
+        }
+    }
     
-    var isScrollMode = false // When true, lets the ScrollView scroll
+    var isScrollMode = false 
 
     private val dp = resources.displayMetrics.density
     private val lineSpacing = 42f * dp 
@@ -53,18 +83,14 @@ class HandwritingView @JvmOverloads constructor(
         for (i in 1..lineCount) {
             val y = i * lineSpacing
             canvas.drawLine(gutterWidth, y, width.toFloat(), y, linePaint)
-            
             val centerY = y - (lineSpacing / 2f) + (numberPaint.textSize / 3f)
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
-        
         for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // If in Scroll Mode, do not intercept touches. Let the ScrollView handle it.
-        if (isScrollMode) return false
-
+        if (isScrollMode) return false // Let ScrollView handle it
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true) 
@@ -86,7 +112,6 @@ class HandwritingView @JvmOverloads constructor(
                 if (event.actionMasked == MotionEvent.ACTION_UP) {
                     extendStroke(stroke, event.x, event.y, event.eventTime)
                 }
-                stroke.path.lineTo(lastX, lastY)
                 current = null
                 parent?.requestDisallowInterceptTouchEvent(false)
                 invalidate()
@@ -115,12 +140,7 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     fun hasInk(): Boolean = strokes.isNotEmpty()
-    
-    fun clear() { 
-        strokes.clear()
-        current = null
-        invalidate() 
-    }
+    fun clear() { strokes.clear(); current = null; invalidate() }
 
     fun buildInkPerLine(): List<Ink> {
         val byLine = sortedMapOf<Int, MutableList<StrokeData>>()
@@ -138,6 +158,28 @@ class HandwritingView @JvmOverloads constructor(
                 inkBuilder.addStroke(strokeBuilder.build())
             }
             inkBuilder.build()
+        }
+    }
+
+    // --- ROTATION STATE SAVING ---
+    override fun onSaveInstanceState(): Parcelable {
+        val bundle = android.os.Bundle()
+        bundle.putParcelableArrayList("strokes", strokes)
+        bundle.putParcelable("superState", super.onSaveInstanceState())
+        return bundle
+    }
+
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state is android.os.Bundle) {
+            val savedStrokes = state.getParcelableArrayList<StrokeData>("strokes")
+            if (savedStrokes != null) {
+                strokes.clear()
+                strokes.addAll(savedStrokes)
+                invalidate()
+            }
+            super.onRestoreInstanceState(state.getParcelable("superState"))
+        } else {
+            super.onRestoreInstanceState(state)
         }
     }
 }
