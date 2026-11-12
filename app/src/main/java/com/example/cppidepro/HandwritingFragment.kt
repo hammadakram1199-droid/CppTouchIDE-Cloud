@@ -1,11 +1,13 @@
 package com.example.cppidepro
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -38,7 +40,7 @@ class HandwritingFragment : Fragment() {
             binding.handwritingView.isScrollMode = !binding.handwritingView.isScrollMode
             if (binding.handwritingView.isScrollMode) {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_sort_by_size)
-                binding.handwritingView.isEraseMode = false // Turn off eraser
+                binding.handwritingView.isEraseMode = false
                 Toast.makeText(context, "Scroll Mode", Toast.LENGTH_SHORT).show()
             } else {
                 binding.btnToggleMode.setImageResource(android.R.drawable.ic_menu_edit)
@@ -46,14 +48,18 @@ class HandwritingFragment : Fragment() {
             }
         }
 
-        // ERASER TOGGLE
+        // PEN SETTINGS DIALOG
+        binding.btnPenSettings.setOnClickListener {
+            showPenSettingsDialog()
+        }
+
         binding.btnEraser.setOnClickListener {
             binding.handwritingView.isEraseMode = !binding.handwritingView.isEraseMode
             if (binding.handwritingView.isEraseMode) {
-                binding.btnEraser.setBackgroundColor(android.graphics.Color.parseColor("#FF5252"))
+                binding.btnEraser.setBackgroundColor(Color.parseColor("#FF5252"))
                 Toast.makeText(context, "Eraser ON", Toast.LENGTH_SHORT).show()
             } else {
-                binding.btnEraser.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                binding.btnEraser.setBackgroundColor(Color.TRANSPARENT)
                 Toast.makeText(context, "Eraser OFF", Toast.LENGTH_SHORT).show()
             }
         }
@@ -68,8 +74,48 @@ class HandwritingFragment : Fragment() {
 
         binding.btnRecognize.setOnClickListener { recognizeInk() }
 
-        // Pre-download the ML Kit model in the background
         setupRecognizer()
+    }
+
+    private fun showPenSettingsDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pen_settings, null)
+        val seekBar = dialogView.findViewById<SeekBar>(R.id.seekBarThickness)
+        
+        seekBar.progress = binding.handwritingView.currentPenThickness.toInt() - 1
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Pen Settings")
+            .setView(dialogView)
+            .setPositiveButton("Done", null)
+            .create()
+
+        // Color Click Listeners
+        dialogView.findViewById<View>(R.id.colorWhite).setOnClickListener {
+            binding.handwritingView.currentPenColor = Color.WHITE
+        }
+        dialogView.findViewById<View>(R.id.colorGreen).setOnClickListener {
+            binding.handwritingView.currentPenColor = Color.parseColor("#00FF88")
+        }
+        dialogView.findViewById<View>(R.id.colorRed).setOnClickListener {
+            binding.handwritingView.currentPenColor = Color.parseColor("#FF5252")
+        }
+        dialogView.findViewById<View>(R.id.colorBlue).setOnClickListener {
+            binding.handwritingView.currentPenColor = Color.parseColor("#448AFF")
+        }
+        dialogView.findViewById<View>(R.id.colorYellow).setOnClickListener {
+            binding.handwritingView.currentPenColor = Color.parseColor("#FFEB3B")
+        }
+
+        // Thickness SeekBar
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                binding.handwritingView.currentPenThickness = (progress + 1).toFloat()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        dialog.show()
     }
 
     private fun showSaveDialog() {

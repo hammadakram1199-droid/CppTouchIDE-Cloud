@@ -30,17 +30,27 @@ class HandwritingView @JvmOverloads constructor(
         }
     }
 
+    // Store color and thickness inside StrokeData
     class StrokeData() : Parcelable {
         val path = Path()
         val points = ArrayList<InkPoint>()
+        var color: Int = Color.WHITE
+        var thickness: Float = 3f
+        
         constructor(parcel: Parcel) : this() {
             parcel.readTypedList(points, InkPoint.CREATOR)
+            color = parcel.readInt()
+            thickness = parcel.readFloat()
             if (points.isNotEmpty()) {
                 path.moveTo(points[0].x, points[0].y)
                 for (i in 1 until points.size) { path.lineTo(points[i].x, points[i].y) }
             }
         }
-        override fun writeToParcel(parcel: Parcel, flags: Int) { parcel.writeTypedList(points) }
+        override fun writeToParcel(parcel: Parcel, flags: Int) { 
+            parcel.writeTypedList(points) 
+            parcel.writeInt(color)
+            parcel.writeFloat(thickness)
+        }
         override fun describeContents(): Int = 0
         companion object CREATOR : Parcelable.Creator<StrokeData> {
             override fun createFromParcel(parcel: Parcel): StrokeData = StrokeData(parcel)
@@ -49,7 +59,11 @@ class HandwritingView @JvmOverloads constructor(
     }
     
     var isScrollMode = false 
-    var isEraseMode = false // NEW ERASER MODE
+    var isEraseMode = false 
+
+    // Current Pen Settings
+    var currentPenColor = Color.WHITE
+    var currentPenThickness = 3f
 
     private val dp = resources.displayMetrics.density
     val lineSpacing = 42f * dp 
@@ -75,8 +89,9 @@ class HandwritingView @JvmOverloads constructor(
     }
     
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFFFFF"); style = Paint.Style.STROKE
-        strokeWidth = 3f * dp; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
     }
 
     private val scrollBarPaint = Paint().apply { color = Color.parseColor("#666666") }
@@ -99,7 +114,12 @@ class HandwritingView @JvmOverloads constructor(
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
         
-        for (stroke in strokes) canvas.drawPath(stroke.path, inkPaint)
+        // Draw each stroke with its saved color and thickness
+        for (stroke in strokes) {
+            inkPaint.color = stroke.color
+            inkPaint.strokeWidth = stroke.thickness * dp
+            canvas.drawPath(stroke.path, inkPaint)
+        }
         canvas.restore()
 
         val scrollBarWidth = 8f * dp
@@ -124,7 +144,6 @@ class HandwritingView @JvmOverloads constructor(
             }
             return false
         } else if (isEraseMode) {
-            // ERASER LOGIC
             if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
                 val touchX = event.x
                 val touchY = event.y + scrollOffsetY
@@ -174,9 +193,7 @@ class HandwritingView @JvmOverloads constructor(
         return current != null
     }
 
-    fun scrollByLines(lines: Int) {
-        updateScroll(scrollOffsetY + (lines * lineSpacing))
-    }
+    fun scrollByLines(lines: Int) { updateScroll(scrollOffsetY + (lines * lineSpacing)) }
 
     private fun updateScroll(newY: Float) {
         val maxScroll = max(0f, totalContentHeight - height)
@@ -186,6 +203,8 @@ class HandwritingView @JvmOverloads constructor(
 
     private fun startStroke(x: Float, y: Float, time: Long) {
         val stroke = StrokeData()
+        stroke.color = currentPenColor
+        stroke.thickness = currentPenThickness
         stroke.path.moveTo(x, y)
         stroke.points.add(InkPoint(x, y, time))
         strokes.add(stroke)
@@ -203,22 +222,8 @@ class HandwritingView @JvmOverloads constructor(
         lastY = y
     }
 
-    fun undo() {
-        if (strokes.isNotEmpty()) {
-            val last = strokes.removeAt(strokes.size - 1)
-            undoStack.add(last)
-            invalidate()
-        }
-    }
-
-    fun redo() {
-        if (undoStack.isNotEmpty()) {
-            val last = undoStack.removeAt(undoStack.size - 1)
-            strokes.add(last)
-            invalidate()
-        }
-    }
-
+    fun undo() { if (strokes.isNotEmpty()) { undoStack.add(strokes.removeAt(strokes.size - 1)); invalidate() } }
+    fun redo() { if (undoStack.isNotEmpty()) { strokes.add(undoStack.removeAt(undoStack.size - 1)); invalidate() } }
     fun hasInk(): Boolean = strokes.isNotEmpty()
     fun clear() { strokes.clear(); undoStack.clear(); current = null; invalidate() }
 

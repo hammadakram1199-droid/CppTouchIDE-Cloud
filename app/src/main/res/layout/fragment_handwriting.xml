@@ -19,7 +19,12 @@
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_edit"
                 android:scaleType="centerInside" app:tint="@color/accent" />
 
-            <!-- Safe Eraser Icon -->
+            <!-- NEW PEN SETTINGS ICON -->
+            <ImageButton
+                android:id="@+id/btnPenSettings" android:layout_width="40dp" android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_preferences"
+                android:scaleType="centerInside" app:tint="#FFFFFF" />
+
             <ImageButton
                 android:id="@+id/btnEraser" android:layout_width="40dp" android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_close_clear_cancel"
