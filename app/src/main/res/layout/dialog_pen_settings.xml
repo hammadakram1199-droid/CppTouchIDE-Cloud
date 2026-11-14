@@ -20,45 +20,11 @@
         android:weightSum="5"
         android:layout_marginBottom="20dp">
 
-        <View
-            android:id="@+id/colorWhite"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_white" />
-        
-        <View
-            android:id="@+id/colorGreen"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_green" />
-
-        <View
-            android:id="@+id/colorRed"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_red" />
-
-        <View
-            android:id="@+id/colorBlue"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_blue" />
-
-        <View
-            android:id="@+id/colorYellow"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_margin="4dp"
-            android:background="@drawable/circle_yellow" />
+        <View android:id="@+id/colorWhite" android:layout_width="40dp" android:layout_height="40dp" android:layout_weight="1" android:layout_margin="4dp" android:background="@drawable/circle_white" />
+        <View android:id="@+id/colorGreen" android:layout_width="40dp" android:layout_height="40dp" android:layout_weight="1" android:layout_margin="4dp" android:background="@drawable/circle_green" />
+        <View android:id="@+id/colorRed" android:layout_width="40dp" android:layout_height="40dp" android:layout_weight="1" android:layout_margin="4dp" android:background="@drawable/circle_red" />
+        <View android:id="@+id/colorBlue" android:layout_width="40dp" android:layout_height="40dp" android:layout_weight="1" android:layout_margin="4dp" android:background="@drawable/circle_blue" />
+        <View android:id="@+id/colorYellow" android:layout_width="40dp" android:layout_height="40dp" android:layout_weight="1" android:layout_margin="4dp" android:background="@drawable/circle_yellow" />
     </LinearLayout>
 
     <TextView
@@ -74,6 +40,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:max="15"
-        android:progress="3" />
+        android:progress="3"
+        android:layout_marginBottom="20dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Eraser Size"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <SeekBar
+        android:id="@+id/seekBarEraserSize"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:progress="40" />
 
 </LinearLayout>

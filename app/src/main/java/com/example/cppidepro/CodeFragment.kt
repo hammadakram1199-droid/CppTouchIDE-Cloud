@@ -17,6 +17,7 @@ class CodeFragment : Fragment() {
     private val viewModel: MainViewModel by activityViewModels()
     private var updatingFromModel = false
     private var lastLineCount = -1
+    private lateinit var soundManager: SoundManager
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCodeBinding.inflate(inflater, container, false)
@@ -25,6 +26,8 @@ class CodeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        soundManager = SoundManager(requireContext())
+        
         binding.etCode.setHorizontallyScrolling(true)
         binding.etCode.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -32,7 +35,13 @@ class CodeFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {
                 val text = s?.toString().orEmpty()
                 updateLineNumbers(text)
-                if (!updatingFromModel) viewModel.setCode(text)
+                if (!updatingFromModel) {
+                    viewModel.setCode(text)
+                    // Play typing sound only if text was added (not deleted)
+                    if (countAdded(text, s)) {
+                        soundManager.playTypeSound()
+                    }
+                }
             }
         })
         viewModel.code.observe(viewLifecycleOwner) { code ->
@@ -44,6 +53,13 @@ class CodeFragment : Fragment() {
             }
         }
         buildSymbolBar()
+    }
+
+    private var lastTextLength = 0
+    private fun countAdded(currentText: String, s: Editable?): Boolean {
+        val isAdded = currentText.length > lastTextLength
+        lastTextLength = currentText.length
+        return isAdded
     }
 
     private fun updateLineNumbers(text: String) {
@@ -77,5 +93,5 @@ class CodeFragment : Fragment() {
         if (!editor.hasFocus()) editor.requestFocus()
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null; lastLineCount = -1 }
+    override fun onDestroyView() { super.onDestroyView(); _binding = null; lastLineCount = -1; lastTextLength = 0 }
 }

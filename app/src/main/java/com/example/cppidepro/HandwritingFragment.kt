@@ -27,6 +27,7 @@ class HandwritingFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: MainViewModel by activityViewModels()
     private var recognizer: DigitalInkRecognizer? = null
+    private lateinit var soundManager: SoundManager
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHandwritingBinding.inflate(inflater, container, false)
@@ -36,6 +37,9 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        soundManager = SoundManager(requireContext())
+        binding.handwritingView.soundManager = soundManager
+
         binding.btnToggleMode.setOnClickListener {
             binding.handwritingView.isScrollMode = !binding.handwritingView.isScrollMode
             if (binding.handwritingView.isScrollMode) {
@@ -48,10 +52,7 @@ class HandwritingFragment : Fragment() {
             }
         }
 
-        // PEN SETTINGS DIALOG
-        binding.btnPenSettings.setOnClickListener {
-            showPenSettingsDialog()
-        }
+        binding.btnPenSettings.setOnClickListener { showPenSettingsDialog() }
 
         binding.btnEraser.setOnClickListener {
             binding.handwritingView.isEraseMode = !binding.handwritingView.isEraseMode
@@ -79,37 +80,35 @@ class HandwritingFragment : Fragment() {
 
     private fun showPenSettingsDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_pen_settings, null)
-        val seekBar = dialogView.findViewById<SeekBar>(R.id.seekBarThickness)
+        val seekBarThickness = dialogView.findViewById<SeekBar>(R.id.seekBarThickness)
+        val seekBarEraser = dialogView.findViewById<SeekBar>(R.id.seekBarEraserSize)
         
-        seekBar.progress = binding.handwritingView.currentPenThickness.toInt() - 1
+        seekBarThickness.progress = binding.handwritingView.currentPenThickness.toInt() - 1
+        seekBarEraser.progress = binding.handwritingView.currentEraserSize.toInt()
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Pen Settings")
+            .setTitle("Pen & Eraser Settings")
             .setView(dialogView)
             .setPositiveButton("Done", null)
             .create()
 
-        // Color Click Listeners
-        dialogView.findViewById<View>(R.id.colorWhite).setOnClickListener {
-            binding.handwritingView.currentPenColor = Color.WHITE
-        }
-        dialogView.findViewById<View>(R.id.colorGreen).setOnClickListener {
-            binding.handwritingView.currentPenColor = Color.parseColor("#00FF88")
-        }
-        dialogView.findViewById<View>(R.id.colorRed).setOnClickListener {
-            binding.handwritingView.currentPenColor = Color.parseColor("#FF5252")
-        }
-        dialogView.findViewById<View>(R.id.colorBlue).setOnClickListener {
-            binding.handwritingView.currentPenColor = Color.parseColor("#448AFF")
-        }
-        dialogView.findViewById<View>(R.id.colorYellow).setOnClickListener {
-            binding.handwritingView.currentPenColor = Color.parseColor("#FFEB3B")
-        }
+        dialogView.findViewById<View>(R.id.colorWhite).setOnClickListener { binding.handwritingView.currentPenColor = Color.WHITE }
+        dialogView.findViewById<View>(R.id.colorGreen).setOnClickListener { binding.handwritingView.currentPenColor = Color.parseColor("#00FF88") }
+        dialogView.findViewById<View>(R.id.colorRed).setOnClickListener { binding.handwritingView.currentPenColor = Color.parseColor("#FF5252") }
+        dialogView.findViewById<View>(R.id.colorBlue).setOnClickListener { binding.handwritingView.currentPenColor = Color.parseColor("#448AFF") }
+        dialogView.findViewById<View>(R.id.colorYellow).setOnClickListener { binding.handwritingView.currentPenColor = Color.parseColor("#FFEB3B") }
 
-        // Thickness SeekBar
-        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        seekBarThickness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 binding.handwritingView.currentPenThickness = (progress + 1).toFloat()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        seekBarEraser.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                binding.handwritingView.currentEraserSize = progress.toFloat().coerceAtLeast(10f)
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}

@@ -30,7 +30,6 @@ class HandwritingView @JvmOverloads constructor(
         }
     }
 
-    // Store color and thickness inside StrokeData
     class StrokeData() : Parcelable {
         val path = Path()
         val points = ArrayList<InkPoint>()
@@ -61,9 +60,12 @@ class HandwritingView @JvmOverloads constructor(
     var isScrollMode = false 
     var isEraseMode = false 
 
-    // Current Pen Settings
     var currentPenColor = Color.WHITE
     var currentPenThickness = 3f
+    var currentEraserSize = 40f // Adjustable Eraser
+    
+    var soundManager: SoundManager? = null
+    private var lastSoundTime = 0L
 
     private val dp = resources.displayMetrics.density
     val lineSpacing = 42f * dp 
@@ -114,7 +116,6 @@ class HandwritingView @JvmOverloads constructor(
             canvas.drawText(i.toString(), gutterWidth / 2f, centerY, numberPaint)
         }
         
-        // Draw each stroke with its saved color and thickness
         for (stroke in strokes) {
             inkPaint.color = stroke.color
             inkPaint.strokeWidth = stroke.thickness * dp
@@ -147,7 +148,9 @@ class HandwritingView @JvmOverloads constructor(
             if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
                 val touchX = event.x
                 val touchY = event.y + scrollOffsetY
-                val eraseRadius = 40f * dp
+                val eraseRadius = currentEraserSize * dp // Use adjustable size
+                var erased = false
+                
                 val iterator = strokes.iterator()
                 while (iterator.hasNext()) {
                     val stroke = iterator.next()
@@ -156,10 +159,15 @@ class HandwritingView @JvmOverloads constructor(
                         val dy = point.y - touchY
                         if (sqrt(dx * dx + dy * dy) < eraseRadius) {
                             iterator.remove()
-                            invalidate()
+                            erased = true
                             break
                         }
                     }
+                }
+                
+                if (erased) {
+                    playSound(false) // Play erase sound
+                    invalidate()
                 }
                 return true
             }
@@ -168,6 +176,7 @@ class HandwritingView @JvmOverloads constructor(
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
+                    playSound(true) // Play draw sound
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -176,6 +185,7 @@ class HandwritingView @JvmOverloads constructor(
                         extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i) + scrollOffsetY, event.getHistoricalEventTime(i))
                     }
                     extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
+                    playSound(true) // Play draw sound
                     invalidate()
                     return true
                 }
@@ -191,6 +201,15 @@ class HandwritingView @JvmOverloads constructor(
             }
         }
         return current != null
+    }
+
+    private fun playSound(isDrawing: Boolean) {
+        // Throttle sound so it doesn't freeze the UI
+        val now = System.currentTimeMillis()
+        if (now - lastSoundTime > 40) { 
+            if (isDrawing) soundManager?.playDrawSound() else soundManager?.playEraseSound()
+            lastSoundTime = now
+        }
     }
 
     fun scrollByLines(lines: Int) { updateScroll(scrollOffsetY + (lines * lineSpacing)) }
