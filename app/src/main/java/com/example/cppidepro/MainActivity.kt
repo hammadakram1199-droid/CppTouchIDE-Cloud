@@ -20,6 +20,10 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.cppidepro.databinding.ActivityMainBinding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.common.model.RemoteModelManager
+import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModel
+import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModelIdentifier
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -34,8 +38,28 @@ class MainActivity : AppCompatActivity() {
         setupTabs()
         setupMenu()
         
+        // START DOWNLOADING THE HANDWRITING MODEL IMMEDIATELY
+        startBackgroundModelDownload()
+
         viewModel.navigateTo.observe(this) { index ->
             if (index != null) { binding.pager.setCurrentItem(index, false); viewModel.onNavigationHandled() }
+        }
+    }
+
+    private fun startBackgroundModelDownload() {
+        try {
+            val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US") ?: return
+            val model = DigitalInkRecognitionModel.builder(identifier).build()
+            val manager = RemoteModelManager.getInstance()
+            
+            manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
+                if (!downloaded) {
+                    // Start downloading silently in the background
+                    manager.download(model, DownloadConditions.Builder().build())
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore if Google Play Services is missing
         }
     }
 

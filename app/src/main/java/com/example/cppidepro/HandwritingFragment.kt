@@ -37,7 +37,7 @@ class HandwritingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        soundManager = SoundManager(requireContext())
+        soundManager = SoundManager()
         binding.handwritingView.soundManager = soundManager
 
         binding.btnToggleMode.setOnClickListener {
@@ -198,6 +198,10 @@ class HandwritingFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() { 
+        super.onDestroyView()
+        soundManager.release()
+        _binding = null 
+    }
     override fun onDestroy() { super.onDestroy(); try { recognizer?.close() } catch (e: Throwable) {}; recognizer = null }
 }
