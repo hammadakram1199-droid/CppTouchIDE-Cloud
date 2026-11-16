@@ -40,6 +40,9 @@ class HandwritingFragment : Fragment() {
         soundManager = SoundManager()
         binding.handwritingView.soundManager = soundManager
 
+        // Sync Sound Icon with Global State
+        updateSoundIcon()
+
         binding.btnToggleMode.setOnClickListener {
             binding.handwritingView.isScrollMode = !binding.handwritingView.isScrollMode
             if (binding.handwritingView.isScrollMode) {
@@ -52,11 +55,20 @@ class HandwritingFragment : Fragment() {
             }
         }
 
-        // VIRTUAL PEN TOGGLE
+        binding.btnSoundToggle.setOnClickListener {
+            SoundManager.isMuted = !SoundManager.isMuted
+            updateSoundIcon()
+            if (SoundManager.isMuted) {
+                Toast.makeText(context, "Sounds OFF", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Sounds ON", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.btnVirtualPen.setOnClickListener {
             binding.handwritingView.isVirtualPenEnabled = !binding.handwritingView.isVirtualPenEnabled
             if (binding.handwritingView.isVirtualPenEnabled) {
-                binding.btnVirtualPen.setBackgroundColor(Color.parseColor("#FFEB3B")) // Yellow background when ON
+                binding.btnVirtualPen.setBackgroundColor(Color.parseColor("#FFEB3B"))
                 binding.btnVirtualPen.setColorFilter(Color.BLACK)
                 Toast.makeText(context, "Virtual Pen ON (Draws above finger)", Toast.LENGTH_SHORT).show()
             } else {
@@ -90,6 +102,16 @@ class HandwritingFragment : Fragment() {
         binding.btnRecognize.setOnClickListener { recognizeInk() }
 
         setupRecognizer()
+    }
+
+    private fun updateSoundIcon() {
+        if (SoundManager.isMuted) {
+            binding.btnSoundToggle.setImageResource(android.R.drawable.ic_lock_silent_mode)
+            binding.btnSoundToggle.setColorFilter(Color.parseColor("#FF5252"))
+        } else {
+            binding.btnSoundToggle.setImageResource(android.R.drawable.ic_lock_silent_mode_off)
+            binding.btnSoundToggle.setColorFilter(Color.WHITE)
+        }
     }
 
     private fun showPenSettingsDialog() {
