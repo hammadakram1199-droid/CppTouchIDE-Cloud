@@ -52,6 +52,20 @@ class HandwritingFragment : Fragment() {
             }
         }
 
+        // VIRTUAL PEN TOGGLE
+        binding.btnVirtualPen.setOnClickListener {
+            binding.handwritingView.isVirtualPenEnabled = !binding.handwritingView.isVirtualPenEnabled
+            if (binding.handwritingView.isVirtualPenEnabled) {
+                binding.btnVirtualPen.setBackgroundColor(Color.parseColor("#FFEB3B")) // Yellow background when ON
+                binding.btnVirtualPen.setColorFilter(Color.BLACK)
+                Toast.makeText(context, "Virtual Pen ON (Draws above finger)", Toast.LENGTH_SHORT).show()
+            } else {
+                binding.btnVirtualPen.setBackgroundColor(Color.TRANSPARENT)
+                binding.btnVirtualPen.setColorFilter(Color.WHITE)
+                Toast.makeText(context, "Virtual Pen OFF", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.btnPenSettings.setOnClickListener { showPenSettingsDialog() }
 
         binding.btnEraser.setOnClickListener {

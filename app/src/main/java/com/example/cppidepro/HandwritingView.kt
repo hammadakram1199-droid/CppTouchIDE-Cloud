@@ -12,7 +12,6 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
 import com.google.mlkit.vision.digitalink.Ink
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -59,10 +58,15 @@ class HandwritingView @JvmOverloads constructor(
     
     var isScrollMode = false 
     var isEraseMode = false 
+    var isVirtualPenEnabled = false // NEW: Virtual Pen Mode
 
     var currentPenColor = Color.WHITE
     var currentPenThickness = 3f
-    var currentEraserSize = 40f // Adjustable Eraser
+    var currentEraserSize = 40f 
+    
+    // Offset for the virtual pen (draws 120dp above and 30dp to the left of the finger)
+    private val virtualPenOffsetX = -30f * resources.displayMetrics.density
+    private val virtualPenOffsetY = -120f * resources.displayMetrics.density
     
     var soundManager: SoundManager? = null
     private var lastSoundTime = 0L
@@ -81,6 +85,11 @@ class HandwritingView @JvmOverloads constructor(
     private var scrollOffsetY = 0f
     private var lastTouchY = 0f
 
+    // For drawing the virtual pen cursor
+    private var lastVirtualX = 0f
+    private var lastVirtualY = 0f
+    private var isDrawingVirtual = false
+
     private val linePaint = Paint().apply { color = Color.parseColor("#444444"); strokeWidth = 1.5f * dp; style = Paint.Style.STROKE }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#1A1A1A") }
     
@@ -97,6 +106,17 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private val scrollBarPaint = Paint().apply { color = Color.parseColor("#666666") }
+
+    // Paint for the Virtual Pen cursor
+    private val virtualCursorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FFEB3B") // Yellow
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * dp
+    }
+    private val virtualCursorFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#44FFEB3B") // Semi-transparent yellow
+        style = Paint.Style.FILL
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -121,6 +141,16 @@ class HandwritingView @JvmOverloads constructor(
             inkPaint.strokeWidth = stroke.thickness * dp
             canvas.drawPath(stroke.path, inkPaint)
         }
+        
+        // Draw the Virtual Pen cursor if active
+        if (isVirtualPenEnabled && isDrawingVirtual) {
+            canvas.drawCircle(lastVirtualX, lastVirtualY, currentPenThickness * dp * 2f, virtualCursorFill)
+            canvas.drawCircle(lastVirtualX, lastVirtualY, currentPenThickness * dp * 2f, virtualCursorPaint)
+            // Draw a small crosshair
+            canvas.drawLine(lastVirtualX - 10f * dp, lastVirtualY, lastVirtualX + 10f * dp, lastVirtualY, virtualCursorPaint)
+            canvas.drawLine(lastVirtualX, lastVirtualY - 10f * dp, lastVirtualX, lastVirtualY + 10f * dp, virtualCursorPaint)
+        }
+        
         canvas.restore()
 
         val scrollBarWidth = 8f * dp
@@ -146,9 +176,17 @@ class HandwritingView @JvmOverloads constructor(
             return false
         } else if (isEraseMode) {
             if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
-                val touchX = event.x
-                val touchY = event.y + scrollOffsetY
-                val eraseRadius = currentEraserSize * dp // Use adjustable size
+                val touchX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
+                val touchY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
+                
+                if (isVirtualPenEnabled) {
+                    lastVirtualX = touchX
+                    lastVirtualY = touchY
+                    isDrawingVirtual = true
+                    invalidate()
+                }
+
+                val eraseRadius = currentEraserSize * dp 
                 var erased = false
                 
                 val iterator = strokes.iterator()
@@ -166,35 +204,62 @@ class HandwritingView @JvmOverloads constructor(
                 }
                 
                 if (erased) {
-                    playSound(false) // Play erase sound
+                    playSound(false) 
                     invalidate()
                 }
                 return true
+            }
+            if (event.actionMasked == MotionEvent.ACTION_UP) {
+                isDrawingVirtual = false
+                invalidate()
             }
             return false
         } else {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
-                    playSound(true) // Play draw sound
+                    val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
+                    val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
+                    
+                    if (isVirtualPenEnabled) {
+                        lastVirtualX = drawX
+                        lastVirtualY = drawY
+                        isDrawingVirtual = true
+                    }
+                    
+                    startStroke(drawX, drawY, event.eventTime)
+                    playSound(true) 
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val stroke = current ?: return false
-                    for (i in 0 until event.historySize) {
-                        extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i) + scrollOffsetY, event.getHistoricalEventTime(i))
+                    val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
+                    val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
+                    
+                    if (isVirtualPenEnabled) {
+                        lastVirtualX = drawX
+                        lastVirtualY = drawY
                     }
-                    extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
-                    playSound(true) // Play draw sound
+                    
+                    for (i in 0 until event.historySize) {
+                        val histX = if (isVirtualPenEnabled) event.getHistoricalX(i) + virtualPenOffsetX else event.getHistoricalX(i)
+                        val histY = if (isVirtualPenEnabled) event.getHistoricalY(i) + scrollOffsetY + virtualPenOffsetY else event.getHistoricalY(i) + scrollOffsetY
+                        extendStroke(stroke, histX, histY, event.getHistoricalEventTime(i))
+                    }
+                    extendStroke(stroke, drawX, drawY, event.eventTime)
+                    
+                    playSound(true) 
                     invalidate()
                     return true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     val stroke = current ?: return false
                     if (event.actionMasked == MotionEvent.ACTION_UP) {
-                        extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
+                        val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
+                        val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
+                        extendStroke(stroke, drawX, drawY, event.eventTime)
                     }
                     current = null
+                    isDrawingVirtual = false
                     invalidate()
                     return true
                 }
@@ -204,7 +269,6 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private fun playSound(isDrawing: Boolean) {
-        // Throttle sound so it doesn't freeze the UI
         val now = System.currentTimeMillis()
         if (now - lastSoundTime > 40) { 
             if (isDrawing) soundManager?.playDrawSound() else soundManager?.playEraseSound()
