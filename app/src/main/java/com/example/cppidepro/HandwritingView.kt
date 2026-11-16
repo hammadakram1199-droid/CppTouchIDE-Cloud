@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.Build
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -67,6 +68,7 @@ class HandwritingView @JvmOverloads constructor(
     private var lastSoundTime = 0L
 
     private val dp = resources.displayMetrics.density
+    // 20% increased line height (50.4dp)
     val lineSpacing = 50.4f * dp 
     private val gutterWidth = 42f * dp 
     private val totalContentHeight = 20000f 
@@ -89,7 +91,6 @@ class HandwritingView @JvmOverloads constructor(
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11f, resources.displayMetrics)
     }
     
-    // Highly precise ink paint
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -135,6 +136,14 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 1. STYLUS ONLY CHECK: Ignore finger touches while drawing to prevent palm marks
+        if (!isScrollMode && !isEraseMode) {
+            val toolType = event.getToolType(0)
+            if (toolType != MotionEvent.TOOL_TYPE_STYLUS && toolType != MotionEvent.TOOL_TYPE_ERASER) {
+                return false // Ignore finger touches
+            }
+        }
+
         if (isScrollMode) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> { lastTouchY = event.y; return true }
@@ -165,7 +174,6 @@ class HandwritingView @JvmOverloads constructor(
                         }
                     }
                 }
-                
                 if (erased) {
                     playSound(false) 
                     invalidate()
@@ -176,19 +184,20 @@ class HandwritingView @JvmOverloads constructor(
         } else {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    // Pixel-perfect mapping: ink starts EXACTLY where touched
+                    // 2. ANTI-LAG: Request unbuffered dispatch for immediate ink
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        requestUnbufferedDispatch(event)
+                    }
                     startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
                     playSound(true) 
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val stroke = current ?: return false
-                    
-                    // Process historical touch points for zero-lag precision
+                    // 3. SMOOTHNESS: Process all historical points to prevent jagged lines
                     for (i in 0 until event.historySize) {
                         extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i) + scrollOffsetY, event.getHistoricalEventTime(i))
                     }
-                    // Process current touch point
                     extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
                     
                     playSound(true) 
@@ -240,6 +249,7 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private fun extendStroke(stroke: StrokeData, x: Float, y: Float, time: Long) {
+        // 4. SMOOTH CURVES: Use quadTo instead of lineTo
         stroke.path.quadTo(lastX, lastY, (x + lastX) / 2f, (y + lastY) / 2f)
         stroke.points.add(InkPoint(x, y, time))
         lastX = x
