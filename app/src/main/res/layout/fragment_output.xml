@@ -3,9 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@color/black" android:orientation="vertical">
+
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:background="@color/panel_bg" android:orientation="horizontal" android:padding="8dp">
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRun" style="@style/Widget.CppIde.ActionButton"
             android:layout_width="match_parent" android:layout_height="48dp"
@@ -13,13 +15,41 @@
             app:backgroundTint="@color/accent" app:icon="@android:drawable/ic_media_play"
             app:iconGravity="textStart" app:iconTint="@color/black" />
     </LinearLayout>
+
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/progress" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:indeterminate="true"
         android:visibility="gone" app:indicatorColor="@color/accent" />
+
+    <!-- INPUT SECTION -->
+    <TextView
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/panel_bg" android:padding="8dp"
+        android:text="Standard Input (cin) - Type here before running:" 
+        android:textColor="@color/editor_text" android:textSize="12sp" />
+        
+    <EditText
+        android:id="@+id/etStdin"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:background="#111111"
+        android:fontFamily="monospace" android:gravity="top|start"
+        android:hint="Enter values for cin here..."
+        android:inputType="textMultiLine|textNoSuggestions"
+        android:padding="12dp" android:textColor="#FFFFFF"
+        android:textColorHint="#666666" android:textSize="14sp" />
+
+    <!-- OUTPUT SECTION -->
+    <TextView
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/panel_bg" android:padding="8dp"
+        android:text="Output Console:" 
+        android:textColor="@color/editor_text" android:textSize="12sp" />
+
     <ScrollView
         android:id="@+id/outputScroll" android:layout_width="match_parent"
-        android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        android:layout_height="0dp" android:layout_weight="2" android:fillViewport="true"
+        android:background="@color/black">
+        
         <TextView
             android:id="@+id/tvOutput" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:fontFamily="monospace"

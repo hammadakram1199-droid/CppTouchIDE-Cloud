@@ -42,11 +42,10 @@ class OutputFragment : Fragment() {
         
         binding.btnRun.setOnClickListener { runCode() }
 
-        // Listen for the Run event from the Code tab
         viewModel.runEvent.observe(viewLifecycleOwner) { shouldRun ->
             if (shouldRun) {
                 runCode()
-                viewModel.onRunHandled() // Reset event
+                viewModel.onRunHandled() 
             }
         }
     }
@@ -58,10 +57,17 @@ class OutputFragment : Fragment() {
             return 
         }
 
+        // GET THE STANDARD INPUT FROM THE USER
+        val stdinInput = binding.etStdin.text.toString()
+
         val payload = JSONObject().apply {
             put("code", code)
             put("compiler", "gcc-head")
             put("options", "warning,c++17")
+            // SEND THE INPUT TO WANDBOX
+            if (stdinInput.isNotEmpty()) {
+                put("stdin", stdinInput)
+            }
         }
         val body = payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
@@ -72,7 +78,7 @@ class OutputFragment : Fragment() {
             .build()
 
         viewModel.setRunning(true)
-        viewModel.setOutput("Compiling and running…")
+        viewModel.setOutput("Compiling and running…\n\n")
 
         currentCall?.cancel()
         val call = client.newCall(request)
