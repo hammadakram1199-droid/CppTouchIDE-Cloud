@@ -1,6 +1,8 @@
 package com.example.cppidepro
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -19,6 +21,11 @@ class CodeFragment : Fragment() {
     private var lastLineCount = -1
     private lateinit var soundManager: SoundManager
     private var lastTextLength = 0
+    
+    // For Syntax Highlighting
+    private val highlighter = SyntaxHighlighter()
+    private val highlightHandler = Handler(Looper.getMainLooper())
+    private var highlightRunnable: Runnable? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCodeBinding.inflate(inflater, container, false)
@@ -36,15 +43,34 @@ class CodeFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {
                 val text = s?.toString().orEmpty()
                 updateLineNumbers(text)
+                
                 if (!updatingFromModel) {
                     viewModel.setCode(text)
                     if (text.length > lastTextLength) {
                         soundManager.playTypeSound()
                     }
+                    
+                    // Debounce the syntax highlighting to prevent cursor jumping and lag
+                    if (s != null) {
+                        highlightRunnable?.let { highlightHandler.removeCallbacks(it) }
+                        highlightRunnable = Runnable {
+                            val selectionStart = binding.etCode.selectionStart
+                            val selectionEnd = binding.etCode.selectionEnd
+                            
+                            highlighter.highlight(s)
+                            
+                            // Restore cursor position
+                            if (selectionStart >= 0 && selectionEnd >= 0) {
+                                binding.etCode.setSelection(selectionStart, selectionEnd)
+                            }
+                        }
+                        highlightHandler.postDelayed(highlightRunnable!!, 100) // 100ms delay
+                    }
                 }
                 lastTextLength = text.length
             }
         })
+
         viewModel.code.observe(viewLifecycleOwner) { code ->
             if (binding.etCode.text.toString() != code) {
                 updatingFromModel = true
@@ -52,6 +78,9 @@ class CodeFragment : Fragment() {
                 binding.etCode.setSelection(binding.etCode.text.length)
                 lastTextLength = code.length
                 updatingFromModel = false
+                
+                // Apply immediate highlight when loading from ViewModel
+                binding.etCode.text?.let { highlighter.highlight(it) }
             }
         }
         buildSymbolBar()
@@ -90,6 +119,7 @@ class CodeFragment : Fragment() {
 
     override fun onDestroyView() { 
         super.onDestroyView()
+        highlightRunnable?.let { highlightHandler.removeCallbacks(it) }
         soundManager.release()
         _binding = null
         lastLineCount = -1
