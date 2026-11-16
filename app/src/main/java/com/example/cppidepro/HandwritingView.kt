@@ -58,15 +58,10 @@ class HandwritingView @JvmOverloads constructor(
     
     var isScrollMode = false 
     var isEraseMode = false 
-    var isVirtualPenEnabled = false // NEW: Virtual Pen Mode
 
     var currentPenColor = Color.WHITE
     var currentPenThickness = 3f
     var currentEraserSize = 40f 
-    
-    // Offset for the virtual pen (draws 120dp above and 30dp to the left of the finger)
-    private val virtualPenOffsetX = -30f * resources.displayMetrics.density
-    private val virtualPenOffsetY = -120f * resources.displayMetrics.density
     
     var soundManager: SoundManager? = null
     private var lastSoundTime = 0L
@@ -85,11 +80,6 @@ class HandwritingView @JvmOverloads constructor(
     private var scrollOffsetY = 0f
     private var lastTouchY = 0f
 
-    // For drawing the virtual pen cursor
-    private var lastVirtualX = 0f
-    private var lastVirtualY = 0f
-    private var isDrawingVirtual = false
-
     private val linePaint = Paint().apply { color = Color.parseColor("#444444"); strokeWidth = 1.5f * dp; style = Paint.Style.STROKE }
     private val gutterPaint = Paint().apply { color = Color.parseColor("#1A1A1A") }
     
@@ -99,6 +89,7 @@ class HandwritingView @JvmOverloads constructor(
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11f, resources.displayMetrics)
     }
     
+    // Highly precise ink paint
     private val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -106,17 +97,6 @@ class HandwritingView @JvmOverloads constructor(
     }
 
     private val scrollBarPaint = Paint().apply { color = Color.parseColor("#666666") }
-
-    // Paint for the Virtual Pen cursor
-    private val virtualCursorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFEB3B") // Yellow
-        style = Paint.Style.STROKE
-        strokeWidth = 2f * dp
-    }
-    private val virtualCursorFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#44FFEB3B") // Semi-transparent yellow
-        style = Paint.Style.FILL
-    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -140,15 +120,6 @@ class HandwritingView @JvmOverloads constructor(
             inkPaint.color = stroke.color
             inkPaint.strokeWidth = stroke.thickness * dp
             canvas.drawPath(stroke.path, inkPaint)
-        }
-        
-        // Draw the Virtual Pen cursor if active
-        if (isVirtualPenEnabled && isDrawingVirtual) {
-            canvas.drawCircle(lastVirtualX, lastVirtualY, currentPenThickness * dp * 2f, virtualCursorFill)
-            canvas.drawCircle(lastVirtualX, lastVirtualY, currentPenThickness * dp * 2f, virtualCursorPaint)
-            // Draw a small crosshair
-            canvas.drawLine(lastVirtualX - 10f * dp, lastVirtualY, lastVirtualX + 10f * dp, lastVirtualY, virtualCursorPaint)
-            canvas.drawLine(lastVirtualX, lastVirtualY - 10f * dp, lastVirtualX, lastVirtualY + 10f * dp, virtualCursorPaint)
         }
         
         canvas.restore()
@@ -176,16 +147,8 @@ class HandwritingView @JvmOverloads constructor(
             return false
         } else if (isEraseMode) {
             if (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE) {
-                val touchX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
-                val touchY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
-                
-                if (isVirtualPenEnabled) {
-                    lastVirtualX = touchX
-                    lastVirtualY = touchY
-                    isDrawingVirtual = true
-                    invalidate()
-                }
-
+                val touchX = event.x
+                val touchY = event.y + scrollOffsetY
                 val eraseRadius = currentEraserSize * dp 
                 var erased = false
                 
@@ -209,43 +172,24 @@ class HandwritingView @JvmOverloads constructor(
                 }
                 return true
             }
-            if (event.actionMasked == MotionEvent.ACTION_UP) {
-                isDrawingVirtual = false
-                invalidate()
-            }
             return false
         } else {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
-                    val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
-                    
-                    if (isVirtualPenEnabled) {
-                        lastVirtualX = drawX
-                        lastVirtualY = drawY
-                        isDrawingVirtual = true
-                    }
-                    
-                    startStroke(drawX, drawY, event.eventTime)
+                    // Pixel-perfect mapping: ink starts EXACTLY where touched
+                    startStroke(event.x, event.y + scrollOffsetY, event.eventTime)
                     playSound(true) 
                     return true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val stroke = current ?: return false
-                    val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
-                    val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
                     
-                    if (isVirtualPenEnabled) {
-                        lastVirtualX = drawX
-                        lastVirtualY = drawY
-                    }
-                    
+                    // Process historical touch points for zero-lag precision
                     for (i in 0 until event.historySize) {
-                        val histX = if (isVirtualPenEnabled) event.getHistoricalX(i) + virtualPenOffsetX else event.getHistoricalX(i)
-                        val histY = if (isVirtualPenEnabled) event.getHistoricalY(i) + scrollOffsetY + virtualPenOffsetY else event.getHistoricalY(i) + scrollOffsetY
-                        extendStroke(stroke, histX, histY, event.getHistoricalEventTime(i))
+                        extendStroke(stroke, event.getHistoricalX(i), event.getHistoricalY(i) + scrollOffsetY, event.getHistoricalEventTime(i))
                     }
-                    extendStroke(stroke, drawX, drawY, event.eventTime)
+                    // Process current touch point
+                    extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
                     
                     playSound(true) 
                     invalidate()
@@ -254,12 +198,9 @@ class HandwritingView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     val stroke = current ?: return false
                     if (event.actionMasked == MotionEvent.ACTION_UP) {
-                        val drawX = if (isVirtualPenEnabled) event.x + virtualPenOffsetX else event.x
-                        val drawY = if (isVirtualPenEnabled) event.y + scrollOffsetY + virtualPenOffsetY else event.y + scrollOffsetY
-                        extendStroke(stroke, drawX, drawY, event.eventTime)
+                        extendStroke(stroke, event.x, event.y + scrollOffsetY, event.eventTime)
                     }
                     current = null
-                    isDrawingVirtual = false
                     invalidate()
                     return true
                 }
