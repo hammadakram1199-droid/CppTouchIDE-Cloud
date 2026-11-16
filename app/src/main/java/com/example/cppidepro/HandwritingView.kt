@@ -67,7 +67,7 @@ class HandwritingView @JvmOverloads constructor(
     private var lastSoundTime = 0L
 
     private val dp = resources.displayMetrics.density
-    val lineSpacing = 42f * dp 
+    val lineSpacing = 50.4f * dp 
     private val gutterWidth = 42f * dp 
     private val totalContentHeight = 20000f 
     

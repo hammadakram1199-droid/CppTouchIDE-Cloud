@@ -2,7 +2,9 @@ package com.example.cppidepro
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.os.Bundle
 import android.print.PrintAttributes
 import android.print.PrintManager
@@ -54,13 +56,10 @@ class MainActivity : AppCompatActivity() {
             
             manager.isModelDownloaded(model).addOnSuccessListener { downloaded ->
                 if (!downloaded) {
-                    // Start downloading silently in the background
                     manager.download(model, DownloadConditions.Builder().build())
                 }
             }
-        } catch (e: Exception) {
-            // Ignore if Google Play Services is missing
-        }
+        } catch (e: Exception) {}
     }
 
     private fun setupPager() {
@@ -96,11 +95,21 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.inflateMenu(R.menu.main_menu)
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_rotate -> { toggleOrientation(); true }
                 R.id.action_load_project -> { showProjectsDialog(); true }
                 R.id.action_export_pdf -> { exportAsPdf(); true }
                 R.id.action_export_txt -> { exportAsTxt(); true }
                 else -> false
             }
+        }
+    }
+
+    private fun toggleOrientation() {
+        val currentOrientation = resources.configuration.orientation
+        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         }
     }
 
