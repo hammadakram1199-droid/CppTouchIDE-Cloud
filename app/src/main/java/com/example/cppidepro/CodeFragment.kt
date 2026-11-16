@@ -22,7 +22,12 @@ class CodeFragment : Fragment() {
     private lateinit var soundManager: SoundManager
     private var lastTextLength = 0
     
-    // For Syntax Highlighting
+    // Undo / Redo Logic
+    private val undoStack = ArrayList<String>()
+    private val redoStack = ArrayList<String>()
+    private var isUndoRedoAction = false
+
+    // Syntax Highlighting
     private val highlighter = SyntaxHighlighter()
     private val highlightHandler = Handler(Looper.getMainLooper())
     private var highlightRunnable: Runnable? = null
@@ -38,7 +43,13 @@ class CodeFragment : Fragment() {
         
         binding.etCode.setHorizontallyScrolling(true)
         binding.etCode.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            var isFirstChange = true
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+                if (!updatingFromModel && !isUndoRedoAction && s != null) {
+                    undoStack.add(s.toString())
+                    redoStack.clear()
+                }
+            }
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 val text = s?.toString().orEmpty()
@@ -46,28 +57,21 @@ class CodeFragment : Fragment() {
                 
                 if (!updatingFromModel) {
                     viewModel.setCode(text)
-                    if (text.length > lastTextLength) {
-                        soundManager.playTypeSound()
-                    }
+                    if (text.length > lastTextLength) soundManager.playTypeSound()
                     
-                    // Debounce the syntax highlighting to prevent cursor jumping and lag
                     if (s != null) {
                         highlightRunnable?.let { highlightHandler.removeCallbacks(it) }
                         highlightRunnable = Runnable {
-                            val selectionStart = binding.etCode.selectionStart
-                            val selectionEnd = binding.etCode.selectionEnd
-                            
+                            val selStart = binding.etCode.selectionStart
+                            val selEnd = binding.etCode.selectionEnd
                             highlighter.highlight(s)
-                            
-                            // Restore cursor position
-                            if (selectionStart >= 0 && selectionEnd >= 0) {
-                                binding.etCode.setSelection(selectionStart, selectionEnd)
-                            }
+                            if (selStart >= 0 && selEnd >= 0) binding.etCode.setSelection(selStart, selEnd)
                         }
-                        highlightHandler.postDelayed(highlightRunnable!!, 100) // 100ms delay
+                        highlightHandler.postDelayed(highlightRunnable!!, 100)
                     }
                 }
                 lastTextLength = text.length
+                isUndoRedoAction = false
             }
         })
 
@@ -78,12 +82,53 @@ class CodeFragment : Fragment() {
                 binding.etCode.setSelection(binding.etCode.text.length)
                 lastTextLength = code.length
                 updatingFromModel = false
-                
-                // Apply immediate highlight when loading from ViewModel
                 binding.etCode.text?.let { highlighter.highlight(it) }
             }
         }
+
+        // Toolbar Buttons
+        binding.btnUndo.setOnClickListener { performUndo() }
+        binding.btnRedo.setOnClickListener { performRedo() }
+        binding.btnDeleteAll.setOnClickListener { 
+            binding.etCode.setText("") 
+            viewModel.setCode("")
+        }
+        binding.btnRun.setOnClickListener {
+            viewModel.triggerRun() // Tell OutputFragment to run
+            viewModel.navigateTo(MainViewModel.TAB_OUTPUT) // Switch tabs
+        }
+
         buildSymbolBar()
+    }
+
+    private fun performUndo() {
+        if (undoStack.isNotEmpty()) {
+            val currentText = binding.etCode.text.toString()
+            redoStack.add(currentText)
+            
+            val prevText = undoStack.removeAt(undoStack.size - 1)
+            isUndoRedoAction = true
+            updatingFromModel = true
+            binding.etCode.setText(prevText)
+            binding.etCode.setSelection(prevText.length)
+            viewModel.setCode(prevText)
+            updatingFromModel = false
+        }
+    }
+
+    private fun performRedo() {
+        if (redoStack.isNotEmpty()) {
+            val currentText = binding.etCode.text.toString()
+            undoStack.add(currentText)
+            
+            val nextText = redoStack.removeAt(redoStack.size - 1)
+            isUndoRedoAction = true
+            updatingFromModel = true
+            binding.etCode.setText(nextText)
+            binding.etCode.setSelection(nextText.length)
+            viewModel.setCode(nextText)
+            updatingFromModel = false
+        }
     }
 
     private fun updateLineNumbers(text: String) {
