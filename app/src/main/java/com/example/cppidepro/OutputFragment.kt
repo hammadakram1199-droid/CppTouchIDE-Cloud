@@ -10,6 +10,7 @@ import com.example.cppidepro.databinding.FragmentOutputBinding
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -57,28 +58,35 @@ class OutputFragment : Fragment() {
             return 
         }
 
-        // GET THE STANDARD INPUT FROM THE USER
+        // Get the user's input for cin
         val stdinInput = binding.etStdin.text.toString()
 
+        // Piston API Payload
         val payload = JSONObject().apply {
-            put("code", code)
-            put("compiler", "gcc-head")
-            put("options", "warning,c++17")
-            // SEND THE INPUT TO WANDBOX
-            if (stdinInput.isNotEmpty()) {
-                put("stdin", stdinInput)
-            }
+            put("language", "c++")
+            put("version", "*")
+            
+            // Add the code file
+            val filesArray = JSONArray()
+            filesArray.put(JSONObject().put("name", "main.cpp").put("content", code))
+            put("files", filesArray)
+            
+            // Add the standard input
+            put("stdin", stdinInput)
         }
+        
         val body = payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
         val request = Request.Builder()
-            .url("https://wandbox.org/api/compile.json")
+            .url("https://emkc.org/api/v2/piston/execute")
             .post(body)
             .header("Content-Type", "application/json")
+            // CRITICAL FIX: User-Agent prevents Piston from blocking the request
+            .header("User-Agent", "Mozilla/5.0 (Android) CppIdePro/1.0") 
             .build()
 
         viewModel.setRunning(true)
-        viewModel.setOutput("Compiling and running…\n\n")
+        viewModel.setOutput("Compiling and running...\n\n")
 
         currentCall?.cancel()
         val call = client.newCall(request)
@@ -102,22 +110,37 @@ class OutputFragment : Fragment() {
     }
 
     private fun formatResponse(httpCode: Int, raw: String): String {
-        if (httpCode !in 200..299) return "Server returned HTTP $httpCode\n$raw"
+        if (httpCode !in 200..299) {
+            return "Server returned HTTP $httpCode\n$raw"
+        }
+        
         val root = JSONObject(raw)
         val sb = StringBuilder()
         
-        val compilerError = root.optString("compiler_error", "")
-        if (compilerError.isNotBlank()) return "── Compilation Error ──\n$compilerError"
-
-        val programOutput = root.optString("program_output", "")
-        val programError = root.optString("program_error", "")
-
-        if (programOutput.isNotBlank()) sb.append(programOutput)
-        if (programError.isNotBlank()) {
-            if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append("\n")
-            sb.append("── Runtime Error ──\n").append(programError)
+        // 1. Check Compile Errors
+        val compile = root.optJSONObject("compile")
+        val compileError = compile?.optString("stderr", "") ?: ""
+        if (compileError.isNotBlank()) {
+            return "── Compilation Error ──\n$compileError"
         }
-        if (sb.isBlank()) sb.append("Program executed, but printed nothing.")
+
+        // 2. Check Program Output (cout)
+        val run = root.optJSONObject("run")
+        val stdout = run?.optString("stdout", "") ?: ""
+        val stderr = run?.optString("stderr", "") ?: ""
+
+        if (stdout.isNotBlank()) {
+            sb.append(stdout)
+        }
+        if (stderr.isNotBlank()) {
+            if (sb.isNotEmpty() && !sb.endsWith("\n")) sb.append("\n")
+            sb.append("── Runtime Error ──\n").append(stderr)
+        }
+
+        if (sb.isBlank()) {
+            sb.append("Program executed, but printed nothing.")
+        }
+        
         return sb.toString()
     }
 
