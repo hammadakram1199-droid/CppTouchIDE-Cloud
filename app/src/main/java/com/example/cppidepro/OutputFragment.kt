@@ -10,7 +10,6 @@ import com.example.cppidepro.databinding.FragmentOutputBinding
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -61,28 +60,19 @@ class OutputFragment : Fragment() {
         // Get the user's input for cin
         val stdinInput = binding.etStdin.text.toString()
 
-        // Piston API Payload
+        // Judge0 API Payload
         val payload = JSONObject().apply {
-            put("language", "c++")
-            put("version", "*")
-            
-            // Add the code file
-            val filesArray = JSONArray()
-            filesArray.put(JSONObject().put("name", "main.cpp").put("content", code))
-            put("files", filesArray)
-            
-            // Add the standard input
+            put("source_code", code)
+            put("language_id", 54) // 54 = C++ (GCC 9.2.0)[reference:2]
             put("stdin", stdinInput)
         }
         
         val body = payload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
 
         val request = Request.Builder()
-            .url("https://emkc.org/api/v2/piston/execute")
+            .url("https://ce.judge0.com/submissions?base64_encoded=false&wait=true") //[reference:3]
             .post(body)
             .header("Content-Type", "application/json")
-            // CRITICAL FIX: User-Agent prevents Piston from blocking the request
-            .header("User-Agent", "Mozilla/5.0 (Android) CppIdePro/1.0") 
             .build()
 
         viewModel.setRunning(true)
@@ -117,17 +107,14 @@ class OutputFragment : Fragment() {
         val root = JSONObject(raw)
         val sb = StringBuilder()
         
-        // 1. Check Compile Errors
-        val compile = root.optJSONObject("compile")
-        val compileError = compile?.optString("stderr", "") ?: ""
-        if (compileError.isNotBlank()) {
-            return "── Compilation Error ──\n$compileError"
+        // Judge0 returns compile and run errors in separate fields
+        val compileOutput = root.optString("compile_output", "")
+        if (compileOutput.isNotBlank()) {
+            return "── Compilation Error ──\n$compileOutput"
         }
 
-        // 2. Check Program Output (cout)
-        val run = root.optJSONObject("run")
-        val stdout = run?.optString("stdout", "") ?: ""
-        val stderr = run?.optString("stderr", "") ?: ""
+        val stdout = root.optString("stdout", "")
+        val stderr = root.optString("stderr", "")
 
         if (stdout.isNotBlank()) {
             sb.append(stdout)
@@ -138,7 +125,8 @@ class OutputFragment : Fragment() {
         }
 
         if (sb.isBlank()) {
-            sb.append("Program executed, but printed nothing.")
+            val status = root.optJSONObject("status")?.optString("description", "Unknown status")
+            sb.append("Program executed, but printed nothing.\nStatus: $status")
         }
         
         return sb.toString()
